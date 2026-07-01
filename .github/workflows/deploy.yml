@@ -1,0 +1,64 @@
+name: Deploy Multi-Vite Projects to GitHub Pages
+
+on:
+  push:
+    branches: [ main ]
+
+permissions:
+  contents: read
+  pages: write
+  id-token: write
+
+concurrency:
+  group: "pages"
+  cancel-in-progress: true
+
+jobs:
+  build-and-deploy:
+    environment:
+      name: github-pages
+      url: ${{ steps.deployment.outputs.page_url }}
+    runs-on: ubuntu-latest
+    steps:
+      - name: Checkout Code
+        uses: actions/checkout@v4
+
+      - name: Set up Node.js
+        uses: actions/setup-node@v4
+        with:
+          node-version: 20
+
+      - name: Create Unified Deployment Directory
+        run: mkdir -p ./final_site
+
+      # --- BUILD PROG 1 ---
+      - name: Build Prog1
+        run: |
+          cd Prog1
+          npm ci
+          npm run build
+          cp -r dist ../final_site/Prog1
+
+      # --- BUILD PROG 2 ---
+      - name: Build Prog2
+        run: |
+          cd Prog2
+          npm ci
+          npm run build
+          cp -r dist ../final_site/Prog2
+
+      # --- [OPTIONAL] CREATE A ROOT HOME PAGE ---
+      - name: Create Landing Page Index
+        run: |
+          if [ ! -f ./final_site/index.html ]; then
+            echo '<!DOCTYPE html><html><head><title>My R1 Apps</title></head><body style="font-family:sans-serif; padding:40px;"><h1>My Programs</h1><ul><li><a href="Prog1/">Program 1</a></li><li><a href="Prog2/">Program 2</a></li></ul></body></html>' > ./final_site/index.html
+          fi
+
+      - name: Upload Build Artifacts
+        uses: actions/upload-pages-artifact@v3
+        with:
+          path: ./final_site
+
+      - name: Deploy to GitHub Pages
+        id: deployment
+        uses: actions/deploy-pages@v4
