@@ -1,0 +1,123 @@
+:root {
+  --r1-width: 240px;
+  --r1-height: 282px;
+  --bg-color: #222;
+  --panel-color: #111;
+}
+
+* {
+  box-sizing: border-box;
+  margin: 0;
+  padding: 0;
+  user-select: none;
+  -webkit-user-select: none;
+}
+
+body {
+  width: var(--r1-width);
+  height: var(--r1-height);
+  background: var(--bg-color);
+  font-family: monospace;
+  overflow: hidden;
+  position: relative;
+  display: flex;
+  flex-direction: column;
+}
+
+#game-canvas {
+  width: 240px;
+  height: 180px;
+  background: #3b7a57;
+  display: block;
+}
+
+.controls-panel {
+  width: 240px;
+  height: 102px;
+  background: var(--panel-color);
+  border-top: 2px solid #444;
+  display: flex;
+  justify-content: space-between;
+  align-items: center;
+  padding: 4px 8px;
+}
+
+.dpad {
+  display: grid;
+  grid-template-columns: repeat(3, 26px);
+  grid-template-rows: repeat(3, 26px);
+  gap: 2px;
+}
+
+.dpad-btn {
+  background: #333;
+  color: #fff;
+  border: 1px solid #555;
+  border-radius: 4px;
+  font-size: 12px;
+  display: flex;
+  align-items: center;
+  justify-content: center;
+  cursor: pointer;
+  touch-action: none; /* Prevents WebView scrolling gestures from hijacking input */
+}
+
+.dpad-btn:active, .dpad-btn.active {
+  background: #666;
+}
+
+.empty-slot {
+  visibility: hidden;
+}
+
+.action-buttons {
+  display: flex;
+  gap: 10px;
+  align-items: center;
+}
+
+.action-btn {
+  width: 36px;
+  height: 36px;
+  border-radius: 50%;
+  border: none;
+  color: white;
+  font-weight: bold;
+  font-size: 14px;
+  box-shadow: 0 3px 0 #000;
+  display: flex;
+  align-items: center;
+  justify-content: center;
+  cursor: pointer;
+  touch-action: none; /* Prevents WebView scrolling gestures from hijacking input */
+}
+
+#btn-b {
+  background: #cc0000;
+}
+#btn-b:active, #btn-b.active {
+  background: #ff3333;
+  transform: translateY(2px);
+  box-shadow: 0 1px 0 #000;
+}
+
+#btn-a {
+  background: #00aa00;
+}
+#btn-a:active, #btn-a.active {
+  background: #00ff00;
+  transform: translateY(2px);
+  box-shadow: 0 1px 0 #000;
+}
+
+#debug-overlay {
+  position: absolute;
+  top: 2px;
+  left: 2px;
+  color: #fff;
+  font-size: 8px;
+  background: rgba(0,0,0,0.6);
+  padding: 2px;
+  pointer-events: none;
+  z-index: 10;
+}
