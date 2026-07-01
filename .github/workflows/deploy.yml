@@ -35,7 +35,7 @@ jobs:
       - name: Build RC Racing
         run: |
           cd "RC Racing"
-          npm ci
+          npm install
           npm run build
           cp -r dist ../final_site/"RC Racing"
 
@@ -43,7 +43,7 @@ jobs:
       - name: Build Prog2
         run: |
           cd Prog2
-          npm ci
+          npm install
           npm run build
           cp -r dist ../final_site/Prog2
 
