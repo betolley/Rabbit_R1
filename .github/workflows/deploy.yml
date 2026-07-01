@@ -40,18 +40,18 @@ jobs:
           cp -r dist ../final_site/"RC Racing"
 
       # --- BUILD PROG 2 ---
-      - name: Build Prog2
-        run: |
-          cd Prog2
-          npm install
-          npm run build
-          cp -r dist ../final_site/Prog2
+      #- name: Build Prog2
+       # run: |
+        #  cd Prog2
+         # npm install
+         # npm run build
+          #cp -r dist ../final_site/Prog2
 
       # --- CREATE A ROOT HOME PAGE ---
       - name: Create Landing Page Index
         run: |
           if [ ! -f ./final_site/index.html ]; then
-            echo '<!DOCTYPE html><html><head><title>My R1 Apps</title></head><body style="font-family:sans-serif; padding:40px;"><h1>My Programs</h1><ul><li><a href="RC%20Racing/">RC Racing Game</a></li><li><a href="Prog2/">Program 2</a></li></ul></body></html>' > ./final_site/index.html
+            echo '<!DOCTYPE html><html><head><title>My R1 Apps</title></head><body style="font-family:sans-serif; padding:40px;"><h1>RC Racer</h1><ul><li><a href="RC%20Racing/">RC Racing Game</a></li><li><a href="Prog2/">TBD</a></li></ul></body></html>' > ./final_site/index.html
           fi
 
       - name: Upload Build Artifacts
