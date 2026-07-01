@@ -32,12 +32,12 @@ jobs:
         run: mkdir -p ./final_site
 
       # --- BUILD PROG 1 ---
-      - name: Build Prog1
+      - name: Build "RC Racing"
         run: |
           cd Prog1
           npm ci
           npm run build
-          cp -r dist ../final_site/Prog1
+          cp -r dist ../final_site/"RC Racing"
 
       # --- BUILD PROG 2 ---
       - name: Build Prog2
