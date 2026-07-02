@@ -1,0 +1,6 @@
+{
+  "name": "R1 Video Portal",
+  "version": "1.0.1",
+  "description": "Video Player with Reload Action",
+  "entrypoint": "index.html"
+}
