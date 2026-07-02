@@ -235,6 +235,39 @@ function startVoiceInput() {
   }
 }
 
+// ===== Message Handler =====
+
+window.onPluginMessage = function(data) {
+  // Handle STT transcript
+  if (data.type === 'sttEnded' && data.transcript) {
+    processTranscript(data.transcript);
+    return;
+  }
+
+  // Handle LLM response
+  let responseText = null;
+  if (data.data) {
+    responseText = typeof data.data === 'string' ? data.data : JSON.stringify(data.data);
+  } else if (data.message) {
+    responseText = data.message;
+  }
+
+  if (responseText) {
+    try {
+      // Try to extract JSON from the response
+      const jsonMatch = responseText.match(/\{[\s\S]*\}/);
+      if (jsonMatch) {
+        const parsed = JSON.parse(jsonMatch[0]);
+        handleMacroResponse(parsed);
+      } else {
+        setStatus('No valid data in response', false);
+      }
+    } catch (e) {
+      setStatus('Error parsing response', false);
+    }
+  }
+};
+
 function stopVoiceInput() {
   if (!isRecording) return;
   isRecording = false;
@@ -291,39 +324,6 @@ function handleMacroResponse(data) {
     setStatus('Could not parse food data', false);
   }
 }
-
-// ===== Message Handler =====
-
-window.onPluginMessage = function(data) {
-  // Handle STT transcript
-  if (data.type === 'sttEnded' && data.transcript) {
-    processTranscript(data.transcript);
-    return;
-  }
-
-  // Handle LLM response
-  let responseText = null;
-  if (data.data) {
-    responseText = typeof data.data === 'string' ? data.data : JSON.stringify(data.data);
-  } else if (data.message) {
-    responseText = data.message;
-  }
-
-  if (responseText) {
-    try {
-      // Try to extract JSON from the response
-      const jsonMatch = responseText.match(/\{[\s\S]*\}/);
-      if (jsonMatch) {
-        const parsed = JSON.parse(jsonMatch[0]);
-        handleMacroResponse(parsed);
-      } else {
-        setStatus('No valid data in response', false);
-      }
-    } catch (e) {
-      setStatus('Error parsing response', false);
-    }
-  }
-};
 
 // ===== Rendering =====
 
