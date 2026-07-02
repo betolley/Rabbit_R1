@@ -40,12 +40,12 @@ jobs:
           cp -r dist ../final_site/"RC Racing"
 
       # --- BUILD PROG 2 ---
-      #- name: Build Prog2
-       # run: |
-        #  cd Prog2
-         # npm install
-         # npm run build
-          #cp -r dist ../final_site/Prog2
+      - name: Build CalorieCounter
+        run: |
+          cd CalorieCounter
+          npm install
+          npm run build
+          cp -r dist ../final_site/CalorieCounter
 
       # --- CREATE A ROOT HOME PAGE ---
       - name: Create Landing Page Index
