@@ -1,0 +1,299 @@
+<!DOCTYPE html>
+<html lang="en">
+<head>
+    <meta charset="UTF-8">
+    <meta name="viewport" content="width=device-width, initial-scale=1.0, maximum-scale=1.0, user-scalable=no">
+    <title>Sentinel2 - R1 UI</title>
+    <style>
+        body { background: #000; color: #0f0; font-family: 'Courier New', monospace; margin: 0; display: flex; flex-direction: column; height: 100vh; overflow: hidden; font-size: 14px; }
+        header { background: #111; padding: 10px; border-bottom: 2px solid #0f0; display: flex; justify-content: space-between; align-items: center; }
+        .header-title { font-weight: bold; font-size: 1.1em; }
+        .status-container { display: flex; flex-direction: column; align-items: flex-end; gap: 5px; }
+        #status-bar { font-size: 0.7em; color: #555; }
+        
+        .main-tabs { display: flex; background: #050505; border-bottom: 1px solid #333; overflow-x: auto; white-space: nowrap; }
+        .main-tab-btn { background: transparent; color: #555; border: none; border-bottom: 2px solid transparent; padding: 12px 15px; cursor: pointer; font-family: inherit; font-size: 0.9em; font-weight: bold; }
+        .main-tab-btn.active { color: #0f0; border-bottom: 2px solid #0f0; }
+
+        .view-content { display: none; flex: 1; overflow-y: auto; flex-direction: column; position: relative; }
+        .view-content.active { display: flex; }
+
+        /* Chat View */
+        #chat-window { flex: 1; overflow-y: auto; padding: 10px; display: flex; flex-direction: column; gap: 10px; padding-bottom: 70px; }
+        .msg { padding: 10px; border-radius: 4px; max-width: 90%; line-height: 1.4; font-size: 1em; word-wrap: break-word; white-space: pre-wrap; }
+        .user { align-self: flex-end; background: #002200; border: 1px solid #0f0; color: #fff; }
+        .assistant { align-self: flex-start; background: #111; border: 1px solid #333; color: #0f0; }
+        
+        .input-wrapper { position: absolute; bottom: 0; left: 0; right: 0; background: #000; border-top: 1px solid #333; display: flex; align-items: center; }
+        input[type="text"] { background: transparent; border: none; color: #0f0; padding: 15px 10px; font-family: inherit; outline: none; flex: 1; font-size: 1em; }
+        .upload-btn { background: #002200; color: #0f0; border-left: 1px solid #333; padding: 15px; font-weight: bold; white-space: nowrap; }
+
+        /* General Panes (Tasks, Stats, Setup, Logs) */
+        .pane-content { padding: 15px; }
+        h3 { color: #444; font-size: 0.8em; letter-spacing: 2px; text-transform: uppercase; margin: 15px 0 10px 0; border-bottom: 1px solid #222; padding-bottom: 5px; }
+        
+        .log-entry { font-size: 0.8em; color: #888; margin-bottom: 5px; border-left: 2px solid #222; padding-left: 5px; word-wrap: break-word; }
+        .sub-item { padding: 12px; border-bottom: 1px solid #1a1a1a; color: #777; font-size: 1em; }
+        .active-sub { color: #0f0; border-left: 4px solid #0f0; background: #111; }
+        
+        button { background: #003300; color: #0f0; border: 1px solid #0f0; padding: 12px; cursor: pointer; font-family: inherit; width: 100%; font-weight: bold; margin-bottom: 10px; }
+        button:active { background: #0f0; color: #000; }
+        .refresh-btn { width: auto; padding: 5px 10px; margin: 0; font-size: 0.8em; }
+
+        select, textarea, input.setup-in { background: #000; color: #0f0; border: 1px solid #333; padding: 12px; font-family: inherit; width: 100%; box-sizing: border-box; margin-bottom: 10px; font-size: 1em; }
+        details { background: #0a0a0a; border: 1px solid #222; padding: 10px; margin-bottom: 10px; font-size: 0.9em; }
+        summary { cursor: pointer; color: #666; font-weight: bold; }
+        pre { white-space: pre-wrap; word-wrap: break-word; color: #888; margin: 8px 0 0 0; font-size: 0.8em; background: #050505; padding: 8px; overflow-x: auto; }
+        
+        /* Voice Controls */
+        .voice-controls { display: flex; border-bottom: 1px solid #333; }
+        .voice-controls button { margin: 0; border-radius: 0; flex: 1; border: none; padding: 15px 5px; font-size: 0.8em; border-right: 1px solid #333; }
+        .voice-controls button:last-child { border-right: none; }
+        .glow-orb { width: 40px; height: 40px; border-radius: 50%; background: radial-gradient(#0ff, #0066ff); margin: 10px auto; transition: transform 0.05s ease-out; box-shadow: 0 0 15px rgba(0, 150, 255, 0.5); }
+    </style>
+</head>
+<body>
+    <header>
+        <div class="header-title">SENTINEL</div>
+        <div class="status-container">
+            <button class="refresh-btn" onclick="refresh()">SYNC</button>
+            <span id="status-bar">OFFLINE</span>
+        </div>
+    </header>
+
+    <div class="main-tabs">
+        <button class="main-tab-btn active" onclick="switchMainTab('view-chat')">CHAT</button>
+        <button class="main-tab-btn" onclick="switchMainTab('view-voice')">VOICE</button>
+        <button class="main-tab-btn" onclick="switchMainTab('view-tasks')">TASKS</button>
+        <button class="main-tab-btn" onclick="switchMainTab('view-stats')">STATS</button>
+        <button class="main-tab-btn" onclick="switchMainTab('view-logs')">LOGS</button>
+        <button class="main-tab-btn" onclick="switchMainTab('view-setup'); loadSetup();">SETUP</button>
+    </div>
+
+    <!-- Chat View -->
+    <div id="view-chat" class="view-content active" onmouseenter="pauseScroll=true" onmouseleave="pauseScroll=false" ontouchstart="pauseScroll=true" ontouchend="pauseScroll=false">
+        <div id="chat-window"></div>
+        <div class="input-wrapper">
+            <input type="text" id="cmd" placeholder="Message..." onkeypress="if(event.key==='Enter') send()">
+            <label for="file-upload" class="upload-btn">[+]</label>
+            <input type="file" id="file-upload" style="display: none;" onchange="uploadFile()">
+        </div>
+    </div>
+
+    <!-- Voice View -->
+    <div id="view-voice" class="view-content">
+        <div style="background: #050505; padding: 30px 0; border-bottom: 1px solid #222;">
+            <div class="glow-orb" id="orb"></div>
+        </div>
+        <div class="voice-controls">
+            <button id="toggle-talk" onclick="toggleTalk()" style="background: #220000; color: #f00;">TALK: OFF</button>
+            <button id="toggle-listen" onclick="toggleListen()" style="background: #220000; color: #f00;">LISTEN: OFF</button>
+            <button id="kill-voice" onclick="killVoice()" style="background: #333; color: #fff;">ALL OFF</button>
+        </div>
+    </div>
+
+    <!-- Tasks View -->
+    <div id="view-tasks" class="view-content pane-content" onmouseenter="pauseRefresh=true" onmouseleave="pauseRefresh=false" ontouchstart="pauseRefresh=true" ontouchend="pauseRefresh=false">
+        <h3>Active Tasks</h3>
+        <div id="task-list"></div>
+    </div>
+
+    <!-- Stats View -->
+    <div id="view-stats" class="view-content pane-content">
+        <h3>System Stats</h3>
+        <div id="sys-stats" style="font-size: 1em; color: #aaa; line-height: 1.8;"></div>
+    </div>
+
+    <!-- Logs & Subjects View -->
+    <div id="view-logs" class="view-content pane-content">
+        <h3>Subjects</h3>
+        <div id="subject-list" style="margin-bottom: 20px;"></div>
+        <h3>Console Logs</h3>
+        <div id="sys-logs" style="flex:1; overflow-y:auto;"></div>
+    </div>
+
+    <!-- Setup View -->
+    <div id="view-setup" class="view-content pane-content" onmouseenter="pauseRefresh=true" onmouseleave="pauseRefresh=false" ontouchstart="pauseRefresh=true" ontouchend="pauseRefresh=false">
+        <h3>Name</h3><input type="text" id="cfg-name" class="setup-in">
+        <h3>Model</h3><select id="model-select"></select>
+        <h3>Context Limit</h3><input type="number" id="cfg-context" class="setup-in">
+        <h3>Voice Accent</h3>
+        <select id="cfg-voice" class="setup-in">
+            <option value="en-com">English (US)</option>
+            <option value="en-co.uk">English (UK)</option>
+            <option value="en-ca">English (Canada)</option>
+            <option value="en-co.in">English (India)</option>
+            <option value="en-com.au">English (Australia)</option>
+            <option value="es-es">Spanish (Spain)</option>
+            <option value="fr-fr">French (France)</option>
+        </select>
+        <label style="display:block; margin-bottom:20px; font-size: 1.1em;"><input type="checkbox" id="cfg-auto-approve" style="transform: scale(1.5); margin-right: 10px;"> Auto Allow Tools</label>
+        <h3>Brain.md</h3><textarea id="brain-editor" rows="10"></textarea>
+        <button onclick="saveSetup()">APPLY CHANGES</button>
+    </div>
+
+    <script>
+        const audioCtx = new (window.AudioContext || window.webkitAudioContext)();
+        const analyser = audioCtx.createAnalyser();
+        analyser.fftSize = 256;
+        let lastMsg = "";
+        let aiTalkEnabled = false;
+        let aiListenEnabled = false;
+        let recognition = null;
+        let pauseScroll = false;
+        let pauseRefresh = false;
+
+        function switchMainTab(viewId) {
+            document.querySelectorAll('.view-content').forEach(el => el.classList.remove('active'));
+            document.querySelectorAll('.main-tab-btn').forEach(el => el.classList.remove('active'));
+            document.getElementById(viewId).classList.add('active');
+            event.target.classList.add('active');
+        }
+
+        function formatPayload(p) {
+            if (p === null || p === undefined) return 'null';
+            let str = typeof p === 'object' ? JSON.stringify(p, null, 2) : String(p);
+            return str.replace(/&/g, '&amp;').replace(/</g, '&lt;').replace(/>/g, '&gt;');
+        }
+
+        if ('webkitSpeechRecognition' in window || 'SpeechRecognition' in window) {
+            const SpeechRecognition = window.SpeechRecognition || window.webkitSpeechRecognition;
+            recognition = new SpeechRecognition();
+            recognition.continuous = true;
+            recognition.interimResults = false;
+            recognition.lang = 'en-US';
+            recognition.onresult = (event) => {
+                const resultText = event.results[event.results.length - 1][0].transcript.trim();
+                if (resultText) { document.getElementById('cmd').value = resultText; send(); }
+            };
+            recognition.onend = () => { if (aiListenEnabled && recognition) { try { recognition.start(); } catch(e) {} } };
+            recognition.onerror = (e) => console.error(e);
+        }
+
+        function toggleTalk() { aiTalkEnabled = !aiTalkEnabled; if (aiTalkEnabled) aiListenEnabled = false; updateVoiceControls(); }
+        function toggleListen() { aiListenEnabled = !aiListenEnabled; if (aiListenEnabled) aiTalkEnabled = false; updateVoiceControls(); }
+        function killVoice() { aiTalkEnabled = false; aiListenEnabled = false; updateVoiceControls(); }
+
+        function updateVoiceControls() {
+            const tBtn = document.getElementById('toggle-talk'), lBtn = document.getElementById('toggle-listen');
+            tBtn.style.background = aiTalkEnabled ? '#003300' : '#220000'; tBtn.style.color = aiTalkEnabled ? '#0f0' : '#f00'; tBtn.innerText = aiTalkEnabled ? 'TALK: ON' : 'TALK: OFF';
+            lBtn.style.background = aiListenEnabled ? '#003300' : '#220000'; lBtn.style.color = aiListenEnabled ? '#0f0' : '#f00'; lBtn.innerText = aiListenEnabled ? 'LISTEN: ON' : 'LISTEN: OFF';
+            if (recognition) { try { aiListenEnabled ? recognition.start() : recognition.stop(); } catch(e) {} }
+        }
+
+        document.body.addEventListener('click', () => { if (audioCtx.state === 'suspended') audioCtx.resume(); }, { once: true });
+
+        async function speak(text) {
+            if (audioCtx.state === 'suspended') await audioCtx.resume();
+            try {
+                const res = await fetch(`/tts?text=${encodeURIComponent(text)}`);
+                const audioBuffer = await audioCtx.decodeAudioData(await res.arrayBuffer());
+                const source = audioCtx.createBufferSource();
+                source.buffer = audioBuffer; source.connect(analyser); analyser.connect(audioCtx.destination);
+                source.onended = () => { if (aiTalkEnabled) { aiTalkEnabled = false; aiListenEnabled = true; updateVoiceControls(); } };
+                source.start(0);
+                function draw() {
+                    let d = new Uint8Array(analyser.frequencyBinCount); analyser.getByteFrequencyData(d);
+                    let avg = d.reduce((a, b) => a + b) / d.length;
+                    document.getElementById('orb').style.transform = `scale(${1 + avg/50})`;
+                    if (source.context.state === 'running') requestAnimationFrame(draw);
+                    else document.getElementById('orb').style.transform = `scale(1)`;
+                }
+                draw();
+            } catch (e) { console.error(e); }
+        }
+
+        async function loadSetup() {
+            try {
+                const r = await fetch('/setup_info'), d = await r.json();
+                document.getElementById('cfg-name').value = d.config.name || '';
+                document.getElementById('cfg-context').value = d.config.max_context_chars || 25000;
+                document.getElementById('cfg-voice').value = d.config.voice || 'en-com';
+                document.getElementById('cfg-auto-approve').checked = d.config.auto_tool_approval || false;
+                document.getElementById('model-select').innerHTML = d.models.map(m => `<option value="${m}" ${m==d.config.model?'selected':''}>${m}</option>`).join('');
+                document.getElementById('brain-editor').value = d.brain;
+            } catch(e) { console.error(e); }
+        }
+        
+        async function saveSetup() {
+            const payload = {
+                name: document.getElementById('cfg-name').value,
+                max_context_chars: parseInt(document.getElementById('cfg-context').value),
+                model: document.getElementById('model-select').value,
+                voice: document.getElementById('cfg-voice').value,
+                auto_tool_approval: document.getElementById('cfg-auto-approve').checked,
+                brain: document.getElementById('brain-editor').value
+            };
+            await fetch('/update_setup', { method: 'POST', headers: {'Content-Type': 'application/json'}, body: JSON.stringify(payload) });
+            alert("Updated.");
+        }
+
+        async function approveTask(tid) { await fetch('/approve_task', { method: 'POST', headers: {'Content-Type': 'application/json'}, body: JSON.stringify({tid: tid}) }); refresh(); }
+        async function denyTask(tid) { await fetch('/deny_task', { method: 'POST', headers: {'Content-Type': 'application/json'}, body: JSON.stringify({tid: tid}) }); refresh(); }
+
+        async function uploadFile() {
+            const input = document.getElementById('file-upload'); if (!input.files || input.files.length === 0) return;
+            const fd = new FormData(); fd.append('file', input.files[0]);
+            document.getElementById('status-bar').innerText = "UPLOADING...";
+            try {
+                const res = await fetch('/upload', { method: 'POST', body: fd }).then(r => r.json());
+                if (res.status === 'ok') { document.getElementById('status-bar').innerText = "UPLOADED"; input.value = ''; refresh(); }
+                else alert("Upload failed: " + res.message);
+            } catch (e) { document.getElementById('status-bar').innerText = "ERROR"; }
+        }
+
+        async function refresh() {
+            if (pauseRefresh) return;
+            try {
+                const r = await fetch('/system_stats'), d = await r.json();
+                document.getElementById('subject-list').innerHTML = d.subjects.map(s => `<div class="sub-item ${s === d.active_subject ? 'active-sub' : ''}" onclick="selectSub('${s}')">${s.toUpperCase()}</div>`).join('');
+                
+                const win = document.getElementById('chat-window'), atBottom = win.scrollHeight - win.scrollTop <= win.clientHeight + 100;
+                win.innerHTML = d.chat.map(m => {
+                    let cText = typeof m.content === 'object' ? JSON.stringify(m.content, null, 2) : String(m.content);
+                    let safeText = cText.replace(/&/g, '&amp;').replace(/</g, '&lt;').replace(/>/g, '&gt;');
+                    return `<div class="msg ${m.role}"><b>${m.role.toUpperCase()}</b><br>${safeText}</div>`;
+                }).join('');
+                if(atBottom && !pauseScroll) win.scrollTop = win.scrollHeight;
+                
+                document.getElementById('sys-logs').innerHTML = d.logs.map(l => `<div class="log-entry">${l}</div>`).join('');
+                
+                document.getElementById('task-list').innerHTML = Object.values(d.tasks).sort((a,b)=>b.timestamp - a.timestamp).map(t => {
+                    let color = t.status === 'Completed' ? '#0f0' : (t.status === 'Failed' ? '#f00' : (t.status === 'Awaiting Approval' ? '#fa0' : '#0cf'));
+                    let html = `<div style="border-bottom:1px solid #222; padding-bottom:10px; margin-bottom:10px;"><span style="color:${color};">[${t.status}]</span> <span style="color:#eee">${t.name}</span>`;
+                    
+                    if(t.status === 'Awaiting Approval') {
+                        html += `<div style="display:flex; gap:10px; margin-top:10px;">
+                            <button onclick="approveTask('${t.id}')" style="margin:0; background:#003300; border:1px solid #0f0; flex:1;">APPROVE</button>
+                            <button onclick="denyTask('${t.id}')" style="margin:0; background:#330000; color:#f00; border:1px solid #f00; flex:1;">DENY</button>
+                        </div>`;
+                    }
+                    
+                    if(t.payload_sent) html += `<details><summary>Payload Sent</summary><pre>${formatPayload(t.payload_sent)}</pre></details>`;
+                    if(t.payload_received) html += `<details><summary>Payload Received</summary><pre>${formatPayload(t.payload_received)}</pre></details>`;
+                    
+                    return html + `</div>`;
+                }).join('');
+
+                document.getElementById('sys-stats').innerHTML = `CPU: ${d.cpu}<br>RAM: ${d.ram}<br>GPU: ${d.gpu}<br>Ollama: ${d.ollama_ps}<br>MODEL: ${d.config.model}<br>VER: v5.21.2-R1-UI`;
+                document.getElementById('status-bar').innerText = new Date().toLocaleTimeString();
+
+                if (d.chat.length > 0 && d.chat[d.chat.length-1].role === 'assistant') {
+                    let newMsg = typeof d.chat[d.chat.length-1].content === 'string' ? d.chat[d.chat.length-1].content : JSON.stringify(d.chat[d.chat.length-1].content);
+                    if (newMsg !== lastMsg) { lastMsg = newMsg; if (aiTalkEnabled) speak(lastMsg); }
+                }
+            } catch(e) { document.getElementById('status-bar').innerText = "OFFLINE"; }
+        }
+
+        async function send() {
+            const el = document.getElementById('cmd'), msg = el.value.trim(); if(!msg) return; el.value = '';
+            if (aiListenEnabled) { aiTalkEnabled = true; aiListenEnabled = false; updateVoiceControls(); }
+            await fetch('/chat', { method: 'POST', headers: {'Content-Type': 'application/json'}, body: JSON.stringify({message: msg}) });
+            setTimeout(refresh, 500); 
+        }
+
+        async function selectSub(sub) { await fetch('/chat', { method: 'POST', headers: {'Content-Type': 'application/json'}, body: JSON.stringify({message: `/select ${sub}`}) }); refresh(); switchMainTab('view-chat'); }
+        setInterval(refresh, 3000); refresh();
+    </script>
+</body>
+</html>
