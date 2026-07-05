@@ -1,2 +1,2 @@
-Using Gemini and Github to build apps.
-https://betolley.github.io/Rabbit_R1/RC%20Racing/
+Using Gemini and Github to build apps.  Use at your own risk.
+https://betolley.github.io/Rabbit_R1/
