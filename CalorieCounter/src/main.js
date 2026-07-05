@@ -13,44 +13,34 @@ let photoStore = {};
 
 // ===== Storage =====
 
-async function saveData() {
-  const payload = JSON.stringify(foodLog);
-  const photoPayload = JSON.stringify(photoStore);
-  if (window.creationStorage) {
-    try {
-      await window.creationStorage.plain.setItem(STORAGE_KEY, btoa(payload));
-      await window.creationStorage.plain.setItem(PHOTO_STORAGE_KEY, btoa(photoPayload));
-    } catch (e) {
-      localStorage.setItem(STORAGE_KEY, payload);
-      localStorage.setItem(PHOTO_STORAGE_KEY, photoPayload);
-    }
-  } else {
-    localStorage.setItem(STORAGE_KEY, payload);
-    localStorage.setItem(PHOTO_STORAGE_KEY, photoPayload);
+function saveData() {
+  try {
+    localStorage.setItem(STORAGE_KEY, JSON.stringify(foodLog));
+    localStorage.setItem(PHOTO_STORAGE_KEY, JSON.stringify(photoStore));
+  } catch (e) {
+    console.error("Failed to save data locally:", e);
   }
 }
 
-async function loadData() {
-  if (window.creationStorage) {
-    try {
-      const stored = await window.creationStorage.plain.getItem(STORAGE_KEY);
-      if (stored) {
-        foodLog = JSON.parse(atob(stored));
-      }
-      const photoStored = await window.creationStorage.plain.getItem(PHOTO_STORAGE_KEY);
-      if (photoStored) {
-        photoStore = JSON.parse(atob(photoStored));
-      }
-      return;
-    } catch (e) { /* fallback */ }
+function loadData() {
+  try {
+    const stored = localStorage.getItem(STORAGE_KEY);
+    if (stored) {
+      foodLog = JSON.parse(stored);
+    }
+  } catch (e) {
+    console.error("Failed to load food log:", e);
+    foodLog = {};
   }
-  const stored = localStorage.getItem(STORAGE_KEY);
-  if (stored) {
-    foodLog = JSON.parse(stored);
-  }
-  const photoStored = localStorage.getItem(PHOTO_STORAGE_KEY);
-  if (photoStored) {
-    photoStore = JSON.parse(photoStored);
+  
+  try {
+    const photoStored = localStorage.getItem(PHOTO_STORAGE_KEY);
+    if (photoStored) {
+      photoStore = JSON.parse(photoStored);
+    }
+  } catch (e) {
+    console.error("Failed to load photos:", e);
+    photoStore = {};
   }
 }
 
@@ -183,8 +173,10 @@ function closeDayPicker() {
 function capturePhoto(index) {
   pendingPhotoIndex = index;
   const input = document.getElementById('camera-input');
-  input.value = '';
-  input.click();
+  if(input) {
+    input.value = '';
+    input.click();
+  }
 }
 
 function handlePhotoCapture(event) {
@@ -227,7 +219,10 @@ function resizeImage(dataUrl, maxSize, callback) {
 function startVoiceInput() {
   if (isRecording) return;
   isRecording = true;
-  document.getElementById('mic-btn').classList.add('recording');
+  
+  const micBtn = document.getElementById('mic-btn');
+  if(micBtn) micBtn.classList.add('recording');
+  
   setStatus('Listening...', true);
 
   if (typeof CreationVoiceHandler !== 'undefined') {
@@ -271,7 +266,10 @@ window.onPluginMessage = function(data) {
 function stopVoiceInput() {
   if (!isRecording) return;
   isRecording = false;
-  document.getElementById('mic-btn').classList.remove('recording');
+  
+  const micBtn = document.getElementById('mic-btn');
+  if(micBtn) micBtn.classList.remove('recording');
+  
   setStatus('Processing...', true);
 
   if (typeof CreationVoiceHandler !== 'undefined') {
@@ -331,13 +329,23 @@ function render() {
   const entries = getEntriesForDate(currentDate);
   const totals = calculateTotals(entries);
 
-  document.getElementById('date-display').textContent = formatDate(currentDate);
-  document.getElementById('total-cal').textContent = totals.calories;
-  document.getElementById('total-protein').textContent = totals.protein + 'g';
-  document.getElementById('total-carbs').textContent = totals.carbs + 'g';
-  document.getElementById('total-fat').textContent = totals.fat + 'g';
+  const dateDisplay = document.getElementById('date-display');
+  if(dateDisplay) dateDisplay.textContent = formatDate(currentDate);
+  
+  const totalCal = document.getElementById('total-cal');
+  if(totalCal) totalCal.textContent = totals.calories;
+  
+  const totalPro = document.getElementById('total-protein');
+  if(totalPro) totalPro.textContent = totals.protein + 'g';
+  
+  const totalCarb = document.getElementById('total-carbs');
+  if(totalCarb) totalCarb.textContent = totals.carbs + 'g';
+  
+  const totalFat = document.getElementById('total-fat');
+  if(totalFat) totalFat.textContent = totals.fat + 'g';
 
   const listEl = document.getElementById('food-list');
+  if (!listEl) return;
 
   if (entries.length === 0) {
     listEl.innerHTML = '<div class="empty-state"><div class="icon">🍽️</div><div>No food logged</div><div>Tap 🎤 or hold PTT to add</div></div>';
@@ -384,6 +392,7 @@ function render() {
 
 function setStatus(text, active) {
   const el = document.getElementById('status-bar');
+  if (!el) return;
   el.textContent = text;
   el.className = active ? 'active' : '';
   if (!active) {
@@ -425,44 +434,55 @@ document.addEventListener('touchend', (e) => {
 
 // ===== Initialization =====
 
-document.addEventListener('DOMContentLoaded', async () => {
-  await loadData();
+document.addEventListener('DOMContentLoaded', () => {
+  // Load local storage synchronously
+  loadData();
   render();
 
   // Save button handler
   const saveBtn = document.getElementById('save-btn');
-  saveBtn.addEventListener('click', async () => {
-    saveBtn.classList.add('saving');
-    await saveData();
-    setStatus('Saved ✓', false);
-    setTimeout(() => saveBtn.classList.remove('saving'), 600);
-  });
+  if(saveBtn) {
+    saveBtn.addEventListener('click', () => {
+      saveBtn.classList.add('saving');
+      saveData();
+      setStatus('Saved ✓', false);
+      setTimeout(() => saveBtn.classList.remove('saving'), 600);
+    });
+  }
 
   // Open button handler
   const openBtn = document.getElementById('open-btn');
-  openBtn.addEventListener('click', () => openDayPicker());
+  if(openBtn) openBtn.addEventListener('click', () => openDayPicker());
 
   // Day picker close
-  document.getElementById('day-picker-close').addEventListener('click', closeDayPicker);
-  document.getElementById('day-picker-overlay').addEventListener('click', (e) => {
-    if (e.target === e.currentTarget) closeDayPicker();
-  });
+  const dpClose = document.getElementById('day-picker-close');
+  if(dpClose) dpClose.addEventListener('click', closeDayPicker);
+  
+  const dpOverlay = document.getElementById('day-picker-overlay');
+  if(dpOverlay) {
+    dpOverlay.addEventListener('click', (e) => {
+      if (e.target === e.currentTarget) closeDayPicker();
+    });
+  }
 
   // Camera input handler
-  document.getElementById('camera-input').addEventListener('change', handlePhotoCapture);
+  const cameraInput = document.getElementById('camera-input');
+  if(cameraInput) cameraInput.addEventListener('change', handlePhotoCapture);
 
   // Mic button handler
   const micBtn = document.getElementById('mic-btn');
-  micBtn.addEventListener('click', () => {
-    if (isRecording) {
-      stopVoiceInput();
-    } else {
-      startVoiceInput();
-      setTimeout(() => {
-        if (isRecording) stopVoiceInput();
-      }, 5000);
-    }
-  });
+  if(micBtn) {
+    micBtn.addEventListener('click', () => {
+      if (isRecording) {
+        stopVoiceInput();
+      } else {
+        startVoiceInput();
+        setTimeout(() => {
+          if (isRecording) stopVoiceInput();
+        }, 5000);
+      }
+    });
+  }
 
   // Keyboard fallback for development
   if (typeof PluginMessageHandler === 'undefined') {
