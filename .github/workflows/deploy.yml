@@ -53,6 +53,7 @@ jobs:
           npm install
           npm run build
           cp -r dist ../final_site/OldCountryMusic
+          cp youtube.html ../final_site/OldCountryMusic/
       # --- COPY SENTINEL CHAT ---
       - name: Prepare Sentinel Chat
         run: |
