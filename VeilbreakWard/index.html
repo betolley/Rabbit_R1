@@ -1,3 +1,5 @@
+[PIPE:bash]
+cat << 'EOF' > index.html
 <!DOCTYPE html>
 <html lang="en">
 <head>
@@ -104,21 +106,22 @@
         .controls-panel {
             background: #222;
             display: flex;
-            padding: 4px 6px;
+            padding: 2px 4px;
             justify-content: space-between;
             align-items: center;
             border-top: 1px solid #444;
             box-sizing: border-box;
             flex-shrink: 0;
-            height: 68px;
+            height: 72px;
         }
 
-        /* Micro D-Pad Configurations */
+        /* D-Pad Configuration optimized for wider side buttons */
         .dpad {
             display: grid;
-            grid-template-columns: repeat(3, 20px);
-            grid-template-rows: repeat(3, 20px);
+            grid-template-columns: 26px 22px 26px;
+            grid-template-rows: 18px 26px 18px;
             gap: 1px;
+            align-items: center;
         }
 
         .dpad-btn {
@@ -127,46 +130,61 @@
             display: flex;
             justify-content: center;
             align-items: center;
-            font-size: 8px;
             font-weight: bold;
             cursor: pointer;
             border-radius: 3px;
             box-shadow: 0 1px 0 #1a252f;
             touch-action: none;
+            height: 100%;
+            width: 100%;
+            box-sizing: border-box;
+        }
+
+        /* Target amplification for Left/Right controls */
+        #pad-left, #pad-right {
+            font-size: 11px;
+            background: #3a536b;
+        }
+
+        #pad-up, #pad-down {
+            font-size: 7px;
         }
 
         .dpad-btn:active {
-            background: #415b76;
+            background: #415b76 !important;
             transform: translateY(1px);
             box-shadow: none;
         }
 
         .empty-slot {
             visibility: hidden;
+            height: 100%;
+            width: 100%;
         }
 
-        /* Mini Action Buttons Layout */
+        /* Action Buttons Layout with widened targets */
         .action-buttons {
             display: flex;
-            gap: 6px;
+            gap: 4px;
             padding-right: 2px;
         }
 
         .action-btn {
-            width: 26px;
-            height: 26px;
+            width: 32px;
+            height: 32px;
             border-radius: 50%;
             border: none;
             background: #e74c3c;
             color: white;
             font-weight: 900;
-            font-size: 11px;
+            font-size: 14px;
             cursor: pointer;
             box-shadow: 0 2px 0 #c0392b;
             display: flex;
             justify-content: center;
             align-items: center;
             touch-action: none;
+            box-sizing: border-box;
         }
 
         .action-btn:active {
@@ -1055,3 +1073,4 @@
 </script>
 </body>
 </html>
+EOF
