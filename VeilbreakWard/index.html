@@ -1,8 +1,10 @@
+[PIPE:bash]
+cat << 'EOF' > index.html
 <!DOCTYPE html>
 <html lang="en">
 <head>
     <meta charset="utf-8" />
-    <meta name="viewport" content="width=device-width, initial-scale=1.0, maximum-scale=1.0, user-scalable=no" />
+    <meta name="viewport" content="width=device-width, initial-scale=1.0, maximum-scale=1.0, user-scalable=no, viewport-fit=cover" />
     <title>Veilbreak Ward - Handheld Edition</title>
     <style>
         :root {
@@ -451,14 +453,16 @@
         o.stop(now + 0.18);
     }
 
-    soundBtn.addEventListener('click', () => {
+    soundBtn.addEventListener('click', (e) => {
+        e.preventDefault();
         ensureAudio();
         if (audioCtx && audioCtx.state === 'suspended') audioCtx.resume();
         sfxEnabled = !sfxEnabled;
         soundBtn.textContent = sfxEnabled ? 'SFX: ON' : 'SFX: OFF';
     });
 
-    musicBtn.addEventListener('click', () => {
+    musicBtn.addEventListener('click', (e) => {
+        e.preventDefault();
         ensureAudio();
         if (audioCtx && audioCtx.state === 'suspended') audioCtx.resume();
         musicEnabled = !musicEnabled;
@@ -491,7 +495,6 @@
     let platforms = [], ladders = [], enemies = [], bullets = [], particles = [], pickups = [], floatingTexts = [];
 
     const keys = { up: false, down: false, left: false, right: false, a: false, b: false, start: false };
-    const keyProcessed = { a: false, b: false };
 
     function rand(min, max) { return Math.random() * (max - min) + min; }
     function rectColl(a, b) { 
@@ -839,7 +842,8 @@
     }
 
     // Toggle Pause Functionality
-    pauseBtn.addEventListener('click', () => {
+    pauseBtn.addEventListener('click', (e) => {
+        e.preventDefault();
         if (!showIntro && !gameOver) {
             isPaused = !isPaused;
             pauseBtn.textContent = isPaused ? 'RESUME' : 'PAUSE';
@@ -874,8 +878,13 @@
         if (k === 'arrowdown' || k === 's') keys.down = true;
         if (k === 'arrowleft' || k === 'a') keys.left = true;
         if (k === 'arrowright' || k === 'd') keys.right = true;
-        if (k === 'x' || k === ' ') keys.a = true;
-        if (k === 'z' || k === 'b') keys.b = true;
+        if (k === 'x' || k === ' ') {
+            if (!showIntro && !gameOver && !isPaused) player.jump();
+            beginGame();
+        }
+        if (k === 'z' || k === 'b') {
+            if (!showIntro && !gameOver && !isPaused) player.shootGun();
+        }
         if (k === 'p' || k === 'escape') pauseBtn.click();
         if (k === 'enter') beginGame();
     });
@@ -886,8 +895,6 @@
         if (k === 'arrowdown' || k === 's') keys.down = false;
         if (k === 'arrowleft' || k === 'a') keys.left = false;
         if (k === 'arrowright' || k === 'd') keys.right = false;
-        if (k === 'x' || k === ' ') keys.a = false;
-        if (k === 'z' || k === 'b') keys.b = false;
     });
 
     // Hardware Multi-Touch Event Binding 
@@ -897,12 +904,28 @@
         
         const press = (e) => { 
             e.preventDefault(); 
-            keys[keyAction] = true; 
-            if (keyAction === 'a') beginGame(); 
+            
+            if (keyAction === 'a') {
+                if (showIntro || gameOver) {
+                    beginGame();
+                } else if (!isPaused) {
+                    player.jump();
+                }
+            } else if (keyAction === 'b') {
+                if (!showIntro && !gameOver && !isPaused) {
+                    player.shootGun();
+                }
+            } else {
+                // Directional D-pad holds
+                keys[keyAction] = true; 
+            }
         };
+
         const release = (e) => { 
             e.preventDefault(); 
-            keys[keyAction] = false; 
+            if (keyAction !== 'a' && keyAction !== 'b') {
+                keys[keyAction] = false; 
+            }
         };
 
         // Capture mobile touch natively to bypass browser tap limits
@@ -923,8 +946,8 @@
     bindControl('btn-a', 'a');
     bindControl('btn-b', 'b');
     
-    restartBtn.addEventListener('click', restartGame);
-    intro.addEventListener('pointerdown', beginGame);
+    restartBtn.addEventListener('click', (e) => { e.preventDefault(); restartGame(); });
+    intro.addEventListener('pointerdown', (e) => { e.preventDefault(); beginGame(); });
 
     function beginGame() {
         if (showIntro) {
@@ -1006,12 +1029,6 @@
         particles = particles.filter(p => !p.mark);
         pickups = pickups.filter(p => !p.mark);
         floatingTexts = floatingTexts.filter(f => !f.mark);
-
-        // Control Buffer Action Executions
-        if (keys.a && !keyProcessed.a) { player.jump(); keyProcessed.a = true; }
-        if (!keys.a) keyProcessed.a = false;
-        if (keys.b && !keyProcessed.b) { player.shootGun(); keyProcessed.b = true; }
-        if (!keys.b) keyProcessed.b = false;
     }
 
     function draw() {
@@ -1061,3 +1078,4 @@
 </script>
 </body>
 </html>
+EOF
