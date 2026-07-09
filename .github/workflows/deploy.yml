@@ -62,8 +62,8 @@ jobs:
             # --- VeilbreakWard ---
       - name: VeilbreakWard
         run: |
-          mkdir -p ./final_site/veilbreakward
-          cp -r veilbreakward/* ./final_site/veilbreakward/  
+          mkdir -p ./final_site/VeilbreakWard
+          cp -r VeilbreakWard/* ./final_site/VeilbreakWard/  
       # --- CREATE A ROOT HOME PAGE ---
       - name: Create Landing Page Index
         run: |
