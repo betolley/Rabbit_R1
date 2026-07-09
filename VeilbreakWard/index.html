@@ -17,7 +17,6 @@ cat << 'EOF' > index.html
         html, body {
             height: 100%;
             margin: 0;
-            padding: 0;
             background: #111;
             font-family: 'Segoe UI', Tahoma, Geneva, Verdana, sans-serif;
             user-select: none;
@@ -25,36 +24,34 @@ cat << 'EOF' > index.html
             display: flex;
             justify-content: center;
             align-items: center;
-            overflow: hidden;
         }
 
-        /* Enforce absolute maximum target footprint sizes */
+        /* RC Racing Container Framework */
         #app {
             width: 240px;
-            height: 320px;
+            height: 340px;
             background: #000;
             position: relative;
             display: flex;
             flex-direction: column;
             overflow: hidden;
-            border: 1px solid #34495e;
-            box-sizing: border-box;
+            border: 4px solid #34495e;
+            border-radius: 12px;
+            box-shadow: 0 12px 36px rgba(0,0,0,0.7);
         }
 
-        /* Upper HUD Block minimized to save vertical space */
+        /* Upper Info Overlay Styled from RC Racing */
         #debug-overlay {
             background: #1a1a24;
             color: var(--ui);
-            padding: 2px 4px;
+            padding: 4px 6px;
             font-family: monospace;
-            font-size: 8px;
-            border-bottom: 1px solid #2c3e50;
+            font-size: 9px;
+            border-bottom: 2px solid #2c3e50;
             z-index: 10;
             display: flex;
             flex-direction: column;
-            gap: 1px;
-            box-sizing: border-box;
-            flex-shrink: 0;
+            gap: 2px;
         }
 
         .hud-row {
@@ -67,33 +64,31 @@ cat << 'EOF' > index.html
             color: var(--accent);
         }
 
-        /* Dynamically sizing canvas area via Flexbox layout constraints */
+        /* Fixed Game Canvas */
         #game-canvas {
-            width: 100%;
-            flex: 1;
+            width: 240px;
+            height: 180px;
             background: #05070a;
             display: block;
-            min-height: 0; /* Critical browser patch for flex truncation */
         }
 
-        /* Micro System Control Utility Bar */
+        /* Utility Toggles Row */
         .utility-bar {
             background: #2c3e50;
             display: flex;
             justify-content: space-around;
-            padding: 2px 0;
+            padding: 3px 0;
             border-bottom: 1px solid #444;
-            flex-shrink: 0;
         }
 
         .util-btn {
             background: rgba(0,0,0,0.4);
             color: #fff;
             border: 1px solid #555;
-            border-radius: 2px;
-            font-size: 7px;
+            border-radius: 4px;
+            font-size: 8px;
             font-weight: bold;
-            padding: 1px 4px;
+            padding: 2px 6px;
             cursor: pointer;
             touch-action: none;
         }
@@ -102,26 +97,23 @@ cat << 'EOF' > index.html
             background: var(--accent);
         }
 
-        /* Gamepad Controls Panel scaled down for short profiles */
+        /* Gamepad Controls Panel */
         .controls-panel {
+            flex: 1;
             background: #222;
             display: flex;
-            padding: 2px 4px;
+            padding: 8px;
             justify-content: space-between;
             align-items: center;
             border-top: 1px solid #444;
-            box-sizing: border-box;
-            flex-shrink: 0;
-            height: 72px;
         }
 
-        /* D-Pad Configuration optimized for wider side buttons */
+        /* D-Pad Configuration Grid */
         .dpad {
             display: grid;
-            grid-template-columns: 26px 22px 26px;
-            grid-template-rows: 18px 26px 18px;
-            gap: 1px;
-            align-items: center;
+            grid-template-columns: repeat(3, 26px);
+            grid-template-rows: repeat(3, 26px);
+            gap: 2px;
         }
 
         .dpad-btn {
@@ -130,82 +122,67 @@ cat << 'EOF' > index.html
             display: flex;
             justify-content: center;
             align-items: center;
+            font-size: 11px;
             font-weight: bold;
             cursor: pointer;
-            border-radius: 3px;
-            box-shadow: 0 1px 0 #1a252f;
+            border-radius: 4px;
+            box-shadow: 0 2px 0 #1a252f;
             touch-action: none;
-            height: 100%;
-            width: 100%;
-            box-sizing: border-box;
-        }
-
-        /* Target amplification for Left/Right controls */
-        #pad-left, #pad-right {
-            font-size: 11px;
-            background: #3a536b;
-        }
-
-        #pad-up, #pad-down {
-            font-size: 7px;
         }
 
         .dpad-btn:active {
-            background: #415b76 !important;
+            background: #415b76;
             transform: translateY(1px);
-            box-shadow: none;
+            box-shadow: 0 1px 0 #1a252f;
         }
 
         .empty-slot {
             visibility: hidden;
-            height: 100%;
-            width: 100%;
         }
 
-        /* Action Buttons Layout with widened targets */
+        /* Action Keys Layout */
         .action-buttons {
             display: flex;
-            gap: 4px;
-            padding-right: 2px;
+            gap: 12px;
+            padding-right: 4px;
         }
 
         .action-btn {
-            width: 32px;
-            height: 32px;
+            width: 38px;
+            height: 38px;
             border-radius: 50%;
             border: none;
             background: #e74c3c;
             color: white;
             font-weight: 900;
-            font-size: 14px;
+            font-size: 15px;
             cursor: pointer;
-            box-shadow: 0 2px 0 #c0392b;
+            box-shadow: 0 3px 0 #c0392b;
             display: flex;
             justify-content: center;
             align-items: center;
             touch-action: none;
-            box-sizing: border-box;
         }
 
         .action-btn:active {
             transform: translateY(1px);
-            box-shadow: 0 1px 0 #c0392b;
+            box-shadow: 0 2px 0 #c0392b;
         }
 
-        /* Alert notifications overlay systems */
+        /* Notifications & Splash Screens */
         #stompNotice, #shrinkNotice {
             position: absolute;
             left: 50%;
-            top: 20%;
+            top: 25%;
             transform: translateX(-50%);
             z-index: 60;
-            padding: 3px 6px;
-            border-radius: 3px;
+            padding: 4px 8px;
+            border-radius: 4px;
             color: #fff;
             font-weight: 900;
-            font-size: 9px;
+            font-size: 10px;
             display: none;
-            box-shadow: 0 2px 4px rgba(0,0,0,0.5);
+            box-shadow: 0 2px 8px rgba(0,0,0,0.5);
             text-align: center;
             white-space: nowrap;
         }
@@ -223,30 +200,31 @@ cat << 'EOF' > index.html
             background: var(--bg-dark);
             color: var(--ui);
             text-align: center;
-            padding: 8px;
+            padding: 12px;
             box-sizing: border-box;
             cursor: pointer;
         }
 
         #intro h1 {
-            font-size: 11px;
-            letter-spacing: 0.5px;
-            margin: 0 0 2px;
+            font-size: 16px;
+            letter-spacing: 2px;
+            margin: 0 0 6px;
             color: #ff6b6b;
+            text-shadow: 0 2px 4px rgba(255,107,107,0.3);
         }
 
         #intro p {
-            font-size: 7px;
-            line-height: 1.15;
-            margin: 2px 0;
+            font-size: 8px;
+            line-height: 1.3;
+            margin: 4px 0;
             color: #ccc;
         }
 
         #intro .hint {
-            margin-top: 4px;
+            margin-top: 10px;
             color: var(--accent);
             font-weight: 800;
-            font-size: 7px;
+            font-size: 9px;
             animation: pulse 1.2s infinite alternate;
         }
 
@@ -259,7 +237,7 @@ cat << 'EOF' > index.html
 <body>
 
 <div id="app">
-    <!-- Combined Header Ribbon HUD (Protected from truncation) -->
+    <!-- Combined Header Ribbon HUD -->
     <div id="debug-overlay">
         <div class="hud-row">
             <span>HP: <strong id="health">5</strong></span>
@@ -273,8 +251,8 @@ cat << 'EOF' > index.html
         </div>
     </div>
 
-    <!-- Gameplay Render Box Context -->
-    <canvas id="game-canvas"></canvas>
+    <!-- Gameplay Area -->
+    <canvas id="game-canvas" width="240" height="180"></canvas>
 
     <!-- System Control Buttons -->
     <div class="utility-bar">
@@ -288,7 +266,7 @@ cat << 'EOF' > index.html
     <div id="stompNotice">VEIL STOMP ENABLED</div>
     <div id="shrinkNotice">Form destabilized!</div>
 
-    <!-- Game Splash Screen Graphic -->
+    <!-- Game Splash / Cinematic Screen -->
     <div id="intro">
         <div>
             <h1>VEILBREAK WARD</h1>
@@ -298,7 +276,7 @@ cat << 'EOF' > index.html
         </div>
     </div>
 
-    <!-- Concrete Handheld Peripheral Interface Panel -->
+    <!-- Concrete Console Button Layout -->
     <div class="controls-panel">
         <div class="dpad">
             <div class="empty-slot"></div>
@@ -336,15 +314,13 @@ cat << 'EOF' > index.html
     const shrinkNotice = document.getElementById('shrinkNotice');
     const restartBtn = document.getElementById('restartBtn');
 
-    // Sync layout rendering resolution directly to calculated container bounds
+    // Enforce static handheld canvas viewport bounds
     function resize() {
-        canvas.width = canvas.clientWidth;
-        canvas.height = canvas.clientHeight;
+        canvas.width = 240;
+        canvas.height = 180;
     }
     window.addEventListener('resize', resize);
-    
-    // Tiny delay ensures canvas size computation registers correctly on startup
-    setTimeout(resize, 50);
+    resize();
 
     let audioCtx = null;
     let sfxEnabled = false;
@@ -524,13 +500,13 @@ cat << 'EOF' > index.html
     function rectColl(a, b) { 
         return a.x < b.x + b.width && a.x + a.width > b.x && a.y < b.y + b.height && a.y + a.height > b.y; 
     }
-    function canvasFloor() { return canvas.height - 24; }
+    function canvasFloor() { return canvas.height - 40; }
 
     const BulletTypes = { AETHER: "aether", SHARD: "shard", PULSE: "pulse" };
 
     class Platform {
         constructor(x, y, w, meta) {
-            this.x = x; this.y = y; this.width = w; this.height = 10;
+            this.x = x; this.y = y; this.width = w; this.height = 12;
             this.mark = false; this.meta = meta || null;
         }
         update() {
@@ -540,13 +516,13 @@ cat << 'EOF' > index.html
             ctx.fillStyle = '#34495e';
             ctx.fillRect(this.x, this.y, this.width, this.height);
             ctx.fillStyle = '#2ecc71';
-            ctx.fillRect(this.x, this.y, this.width, 2);
+            ctx.fillRect(this.x, this.y, this.width, 3);
         }
     }
 
     class Ladder {
         constructor(x, y, h) {
-            this.x = x; this.y = y; this.width = 12; this.height = h;
+            this.x = x; this.y = y; this.width = 16; this.height = h;
             this.mark = false;
         }
         update() {
@@ -554,9 +530,9 @@ cat << 'EOF' > index.html
         }
         draw() {
             ctx.fillStyle = '#7f8c8d';
-            ctx.fillRect(this.x, this.y, 2, this.height);
-            ctx.fillRect(this.x + this.width - 2, this.y, 2, this.height);
-            for (let i = 4; i < this.height; i += 8) {
+            ctx.fillRect(this.x, this.y, 3, this.height);
+            ctx.fillRect(this.x + this.width - 3, this.y, 3, this.height);
+            for (let i = 4; i < this.height; i += 10) {
                 ctx.fillRect(this.x, this.y + i, this.width, 2);
             }
         }
@@ -564,7 +540,7 @@ cat << 'EOF' > index.html
 
     class Pickup {
         constructor(x, y, type) {
-            this.x = x; this.y = y; this.width = 10; this.height = 10;
+            this.x = x; this.y = y; this.width = 14; this.height = 14;
             this.type = type; this.phase = rand(0, 5); this.mark = false;
         }
         update() {
@@ -573,15 +549,15 @@ cat << 'EOF' > index.html
         }
         draw() {
             ctx.save();
-            ctx.translate(this.x + this.width / 2, this.y + this.height / 2 + Math.sin(this.phase) * 1.5);
+            ctx.translate(this.x + this.width / 2, this.y + this.height / 2 + Math.sin(this.phase) * 2);
             if (this.type === 'morrowTincture') {
-                ctx.fillStyle = '#9b59b6'; ctx.fillRect(-4, -4, 8, 8);
+                ctx.fillStyle = '#9b59b6'; ctx.fillRect(-5, -5, 10, 10);
             } else if (this.type === 'preservedRations') {
-                ctx.fillStyle = '#2ecc71'; ctx.fillRect(-5, -3, 10, 6);
+                ctx.fillStyle = '#2ecc71'; ctx.fillRect(-6, -4, 12, 8);
             } else if (this.type === 'aetherCell') {
-                ctx.fillStyle = '#f1c40f'; ctx.fillRect(-3, -5, 6, 10);
+                ctx.fillStyle = '#f1c40f'; ctx.fillRect(-4, -6, 8, 12);
             } else {
-                ctx.fillStyle = '#e67e22'; ctx.beginPath(); ctx.arc(0, 0, 4, 0, Math.PI*2); ctx.fill();
+                ctx.fillStyle = '#e67e22'; ctx.beginPath(); ctx.arc(0, 0, 5, 0, Math.PI*2); ctx.fill();
             }
             ctx.restore();
         }
@@ -589,12 +565,12 @@ cat << 'EOF' > index.html
 
     class Particle {
         constructor(x, y, c) {
-            this.x = x; this.y = y; this.vx = rand(-1.5, 1.5); this.vy = rand(-3, -1);
-            this.size = rand(1, 3); this.color = c; this.life = 1; this.mark = false;
+            this.x = x; this.y = y; this.vx = rand(-2, 2); this.vy = rand(-4, -1);
+            this.size = rand(1, 4); this.color = c; this.life = 1; this.mark = false;
         }
         update() {
             this.x += this.vx; this.y += this.vy;
-            this.vy += 0.2; this.life -= 0.06;
+            this.vy += 0.2; this.life -= 0.05;
             if (this.life <= 0) this.mark = true;
         }
         draw() {
@@ -610,13 +586,13 @@ cat << 'EOF' > index.html
             this.x = x; this.y = y; this.text = t; this.life = 1; this.mark = false;
         }
         update() {
-            this.y -= 0.4; this.life -= 0.05;
+            this.y -= 0.5; this.life -= 0.04;
             if (this.life <= 0) this.mark = true;
         }
         draw() {
             ctx.globalAlpha = Math.max(0, this.life);
             ctx.fillStyle = '#f1c40f';
-            ctx.font = 'bold 7px monospace';
+            ctx.font = 'bold 8px monospace';
             ctx.fillText(this.text, this.x, this.y);
             ctx.globalAlpha = 1;
         }
@@ -625,9 +601,8 @@ cat << 'EOF' > index.html
     class Bullet {
         constructor(x, y, vx, vy, type = BulletTypes.AETHER) {
             this.x = x; this.y = y; this.vx = vx; this.vy = vy;
-            this.type = type; this.width = 4; this.height = 4;
-            this.mark = false;
-            this.color = '#f1c40f';
+            this.type = type; this.width = 6; this.height = 6;
+            this.mark = false; this.color = '#f1c40f';
         }
         update() {
             this.x += this.vx; this.y += this.vy;
@@ -648,10 +623,13 @@ cat << 'EOF' > index.html
         constructor(type, x, y) {
             this.type = type;
             this.x = x || cameraX + canvas.width + 20;
-            this.y = y || canvasFloor() - 16;
-            this.width = 12; this.height = 16;
+            this.y = y || canvasFloor() - 20;
+            this.width = 16; this.height = 20;
             this.dy = 0; this.gravity = 0.4;
+            
+            // Reduced enemy speed for better pacing
             this.speed = 0.3 + Math.random() * 0.4; 
+            
             this.mark = false;
             this.score = { hollowStrider: 100, gloomGnat: 120, shardbackCrawler: 150 }[type] || 100;
             this.canStomp = (type !== 'veilGnawer');
@@ -677,7 +655,7 @@ cat << 'EOF' > index.html
             }
 
             for (let p of platforms) {
-                if (this.dy >= 0 && rectColl(this, p) && (this.y + this.height - this.dy <= p.y + 3)) {
+                if (this.dy >= 0 && rectColl(this, p) && (this.y + this.height - this.dy <= p.y + 4)) {
                     this.y = p.y - this.height;
                     this.dy = 0;
                 }
@@ -689,18 +667,18 @@ cat << 'EOF' > index.html
             ctx.fillStyle = this.type === 'gloomGnat' ? '#9b59b6' : '#e74c3c';
             ctx.fillRect(this.x, this.y, this.width, this.height);
             ctx.fillStyle = '#000';
-            ctx.fillRect(this.x + 2, this.y + 3, 2, 2);
+            ctx.fillRect(this.x + 3, this.y + 4, 3, 3);
         }
     }
 
     class Player {
         constructor() {
-            this.baseW = 10; this.baseH = 18;
+            this.baseW = 12; this.baseH = 22;
             this.width = this.baseW; this.height = this.baseH;
-            this.x = 40; this.y = 40;
+            this.x = 40; this.y = 60;
             this.dx = 0; this.dy = 0;
-            this.speed = 2.0; this.climbSpeed = 1.3;
-            this.gravity = 0.4; this.jumpForce = -6.8;
+            this.speed = 2.2; this.climbSpeed = 1.5;
+            this.gravity = 0.4; this.jumpForce = -7.5;
             this.grounded = false; this.isClimbing = false;
             this.facing = true; this.scale = 1;
             this.health = 5; this.ammo = 20; this.maxAmmo = 20;
@@ -709,11 +687,11 @@ cat << 'EOF' > index.html
             this.overheated = false;
         }
         setScale(s) {
-            this.scale = Math.max(1, Math.min(2.5, s));
+            this.scale = Math.max(1, Math.min(3, s));
             this.width = this.baseW * this.scale;
             this.height = this.baseH * this.scale;
             sizeEl.textContent = this.scale.toFixed(1) + "x";
-            if (this.scale >= 2.5) flashStompNotice();
+            if (this.scale >= 3) flashStompNotice();
         }
         growBy(amount) { this.setScale(this.scale + amount); }
         shrinkBy(amount) {
@@ -725,13 +703,13 @@ cat << 'EOF' > index.html
             this.ammo = Math.min(this.maxAmmo, this.ammo + amount);
             ammoEl.textContent = this.ammo;
         }
-        canStomp() { return this.scale >= 2.0; }
+        canStomp() { return this.scale >= 2.5; }
         jump() {
             if (this.grounded || this.isClimbing) {
                 this.isClimbing = false;
                 this.dy = this.jumpForce;
                 this.grounded = false;
-                for (let i = 0; i < 3; i++) {
+                for (let i = 0; i < 4; i++) {
                     particles.push(new Particle(this.x + this.width / 2, this.y + this.height, '#fff'));
                 }
                 playJump();
@@ -745,10 +723,10 @@ cat << 'EOF' > index.html
             this.ammo -= 1;
             ammoEl.textContent = this.ammo;
             
-            let vx = this.facing ? 4.5 : -4.5;
+            let vx = this.facing ? 5 : -5;
             let vy = 0;
-            if (keys.up) { vy = -4.5; vx = 0; }
-            if (keys.down) { vy = 4.5; vx = 0; }
+            if (keys.up) { vy = -5; vx = 0; }
+            if (keys.down) { vy = 5; vx = 0; }
 
             bullets.push(new Bullet(this.x + this.width / 2, this.y + this.height / 3, vx, vy));
             playShoot();
@@ -793,7 +771,7 @@ cat << 'EOF' > index.html
 
             if (!this.isClimbing) {
                 for (let p of platforms) {
-                    if (this.dy >= 0 && rectColl(this, p) && (this.y + this.height - this.dy <= p.y + 3)) {
+                    if (this.dy >= 0 && rectColl(this, p) && (this.y + this.height - this.dy <= p.y + 4)) {
                         this.y = p.y - this.height;
                         this.dy = 0;
                         this.grounded = true;
@@ -812,9 +790,10 @@ cat << 'EOF' > index.html
             ctx.save();
             ctx.fillStyle = this.overheated ? '#e74c3c' : '#3498db';
             ctx.fillRect(this.x, this.y, this.width, this.height);
+            // Visor line facing direction
             ctx.fillStyle = '#fff';
-            if (this.facing) ctx.fillRect(this.x + this.width - 2, this.y + 3, 2, 2);
-            else ctx.fillRect(this.x, this.y + 3, 2, 2);
+            if (this.facing) ctx.fillRect(this.x + this.width - 3, this.y + 4, 3, 3);
+            else ctx.fillRect(this.x, this.y + 4, 3, 3);
             ctx.restore();
         }
     }
@@ -823,27 +802,27 @@ cat << 'EOF' > index.html
 
     function spawnInitialScenery() {
         platforms = [
-            new Platform(10, 75, 60),
-            new Platform(90, 60, 60),
-            new Platform(50, 35, 50)
+            new Platform(10, 110, 80),
+            new Platform(110, 90, 70),
+            new Platform(60, 50, 60)
         ];
         ladders = [
-            new Ladder(68, 60, 35),
-            new Ladder(100, 35, 25)
+            new Ladder(84, 90, 50),
+            new Ladder(120, 50, 40)
         ];
-        enemies = [new Enemy('hollowStrider', 110, 40)];
-        pickups = [new Pickup(60, 20, 'aetherCell')];
+        enemies = [new Enemy('hollowStrider', 130, 70)];
+        pickups = [new Pickup(70, 30, 'aetherCell')];
     }
     spawnInitialScenery();
 
     function spawnGenerators() {
-        if (frames % 150 === 0) {
-            const nextX = cameraX + canvas.width + rand(10, 30);
-            const nextY = rand(40, 80);
-            platforms.push(new Platform(nextX, nextY, rand(35, 65)));
-            if (Math.random() < 0.4) ladders.push(new Ladder(nextX + 8, nextY, 30));
-            if (Math.random() < 0.5) enemies.push(new Enemy(Math.random() < 0.5 ? 'gloomGnat' : 'hollowStrider', nextX + 15, nextY - 18));
-            if (Math.random() < 0.3) pickups.push(new Pickup(nextX + 5, nextY - 12, Math.random() < 0.5 ? 'morrowTincture' : 'aetherCell'));
+        if (frames % 140 === 0) {
+            const nextX = cameraX + canvas.width + rand(10, 40);
+            const nextY = rand(60, 110);
+            platforms.push(new Platform(nextX, nextY, rand(40, 80)));
+            if (Math.random() < 0.4) ladders.push(new Ladder(nextX + 10, nextY, 40));
+            if (Math.random() < 0.5) enemies.push(new Enemy(Math.random() < 0.5 ? 'gloomGnat' : 'hollowStrider', nextX + 20, nextY - 22));
+            if (Math.random() < 0.3) pickups.push(new Pickup(nextX + 5, nextY - 15, Math.random() < 0.5 ? 'morrowTincture' : 'aetherCell'));
         }
     }
 
@@ -854,7 +833,7 @@ cat << 'EOF' > index.html
 
     function damagePlayer() {
         if (player.scale > 1) {
-            player.shrinkBy(0.4);
+            player.shrinkBy(0.5);
         } else {
             player.health -= 1;
             healthEl.textContent = player.health;
@@ -862,6 +841,7 @@ cat << 'EOF' > index.html
         }
     }
 
+    // Toggle Pause Functionality
     pauseBtn.addEventListener('click', (e) => {
         e.preventDefault();
         if (!showIntro && !gameOver) {
@@ -882,7 +862,7 @@ cat << 'EOF' > index.html
         heatEl.textContent = '0%';
         pauseBtn.textContent = 'PAUSE';
         
-        player.x = 40; player.y = 40;
+        player.x = 40; player.y = 60;
         player.health = 5; player.ammo = 20; player.heat = 0; player.scale = 1;
         player.overheated = false; player.isClimbing = false;
 
@@ -891,6 +871,7 @@ cat << 'EOF' > index.html
         restartBtn.style.display = "none";
     }
 
+    // Keyboard Input Processing
     window.addEventListener('keydown', e => {
         const k = e.key.toLowerCase();
         if (k === 'arrowup' || k === 'w') keys.up = true;
@@ -916,30 +897,43 @@ cat << 'EOF' > index.html
         if (k === 'arrowright' || k === 'd') keys.right = false;
     });
 
+    // Hardware Multi-Touch Event Binding 
     function bindControl(id, keyAction) {
         const el = document.getElementById(id);
         if (!el) return;
         
         const press = (e) => { 
             e.preventDefault(); 
+            
             if (keyAction === 'a') {
-                if (showIntro || gameOver) beginGame();
-                else if (!isPaused) player.jump();
+                if (showIntro || gameOver) {
+                    beginGame();
+                } else if (!isPaused) {
+                    player.jump();
+                }
             } else if (keyAction === 'b') {
-                if (!showIntro && !gameOver && !isPaused) player.shootGun();
+                if (!showIntro && !gameOver && !isPaused) {
+                    player.shootGun();
+                }
             } else {
+                // Directional D-pad holds
                 keys[keyAction] = true; 
             }
         };
 
         const release = (e) => { 
             e.preventDefault(); 
-            if (keyAction !== 'a' && keyAction !== 'b') keys[keyAction] = false; 
+            if (keyAction !== 'a' && keyAction !== 'b') {
+                keys[keyAction] = false; 
+            }
         };
 
+        // Capture mobile touch natively to bypass browser tap limits
         el.addEventListener('touchstart', press, { passive: false });
         el.addEventListener('touchend', release, { passive: false });
         el.addEventListener('touchcancel', release, { passive: false });
+        
+        // Desktop fallbacks
         el.addEventListener('mousedown', press);
         el.addEventListener('mouseup', release);
         el.addEventListener('mouseleave', release);
@@ -973,7 +967,8 @@ cat << 'EOF' > index.html
         spawnGenerators();
         player.update();
         
-        cameraX = player.x - canvas.width * 0.35;
+        // Track fluid camera focus scroll center position
+        cameraX = player.x - canvas.width * 0.3;
 
         platforms.forEach(p => p.update());
         ladders.forEach(l => l.update());
@@ -983,6 +978,7 @@ cat << 'EOF' > index.html
         pickups.forEach(p => p.update());
         floatingTexts.forEach(f => f.update());
 
+        // Bullet Combat Interaction Collision Loops
         for (let b of bullets) {
             for (let en of enemies) {
                 if (!b.mark && !en.mark && rectColl(b, en)) {
@@ -991,11 +987,12 @@ cat << 'EOF' > index.html
                     scoreEl.textContent = score;
                     floatingTexts.push(new FloatingText(en.x, en.y, '+' + en.score));
                     playMonster();
-                    for(let i=0; i<4; i++) particles.push(new Particle(en.x, en.y, '#e67e22'));
+                    for(let i=0; i<6; i++) particles.push(new Particle(en.x, en.y, '#e67e22'));
                 }
             }
         }
 
+        // Drop Item Interaction Processing
         for (let pu of pickups) {
             if (!pu.mark && rectColl(player, pu)) {
                 pu.mark = true;
@@ -1005,13 +1002,14 @@ cat << 'EOF' > index.html
                 } else if (pu.type === 'aetherCell') {
                     player.refillAmmo(10);
                 }
-                floatingTexts.push(new FloatingText(player.x, player.y - 8, 'ITEM'));
+                floatingTexts.push(new FloatingText(player.x, player.y - 10, 'ITEM GRAB'));
             }
         }
 
+        // Enemy Combat Interaction Resolution Loop
         for (let en of enemies) {
             if (!en.mark && rectColl(player, en)) {
-                if (player.canStomp() && player.dy > 0 && (player.y + player.height <= en.y + 6)) {
+                if (player.canStomp() && player.dy > 0 && (player.y + player.height <= en.y + 8)) {
                     en.mark = true;
                     score += en.score * 2;
                     scoreEl.textContent = score;
@@ -1023,6 +1021,7 @@ cat << 'EOF' > index.html
             }
         }
 
+        // Frame cleanups
         platforms = platforms.filter(p => !p.mark);
         ladders = ladders.filter(l => !l.mark);
         enemies = enemies.filter(e => !e.mark);
@@ -1037,7 +1036,7 @@ cat << 'EOF' > index.html
         ctx.fillRect(0, 0, canvas.width, canvas.height);
 
         ctx.save();
-        ctx.translate(-cameraX, 0);
+        ctx.translate(-cameraX, 0); // Translate camera view port context
 
         platforms.forEach(p => p.draw());
         ladders.forEach(l => l.draw());
@@ -1050,19 +1049,25 @@ cat << 'EOF' > index.html
 
         ctx.restore();
 
+        // Screen boundary frame floor ground line graphic 
         ctx.fillStyle = '#2c3e50';
-        ctx.fillRect(0, canvasFloor(), canvas.width, 24);
+        ctx.fillRect(0, canvasFloor(), canvas.width, 40);
     }
 
     function loop() {
         if (!showIntro) {
-            if (!isPaused) update();
+            // Apply Pause State Check
+            if (!isPaused) {
+                update();
+            }
             draw();
+            
+            // Draw Pause Overlay if active
             if (isPaused) {
                 ctx.fillStyle = 'rgba(0,0,0,0.6)';
                 ctx.fillRect(0, 0, canvas.width, canvas.height);
                 ctx.fillStyle = '#ff6b6b';
-                ctx.font = 'bold 12px monospace';
+                ctx.font = 'bold 16px monospace';
                 ctx.textAlign = 'center';
                 ctx.fillText('PAUSED', canvas.width / 2, canvas.height / 2);
             }
