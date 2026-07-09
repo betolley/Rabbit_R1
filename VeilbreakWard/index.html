@@ -197,6 +197,7 @@
             text-align: center;
             padding: 12px;
             box-sizing: border-box;
+            cursor: pointer;
         }
 
         #intro h1 {
@@ -265,7 +266,7 @@
             <h1>VEILBREAK WARD</h1>
             <p><strong>Daniel Bruce Tolley</strong>, field warden of the Astral Survey, is stationed in the Veilbreak Expanse—a frontier where reality has thinned and anomalies bleed into the world.</p>
             <p>As fractures spread, Daniel hunts entities, recovers anchors, and holds the world together before reality completely tears apart.</p>
-            <div class="hint">Press A Button or ENTER to Start</div>
+            <div class="hint">Tap Screen, Press A, or ENTER to Start</div>
         </div>
     </div>
 
@@ -881,6 +882,9 @@
     document.getElementById('btn-b').addEventListener('pointerdown', (e) => { e.preventDefault(); keys.b = true; });
     document.getElementById('btn-b').addEventListener('pointerup', () => keys.b = false);
     restartBtn.addEventListener('click', restartGame);
+    
+    // Tap to start listener
+    intro.addEventListener('pointerdown', beginGame);
 
     function beginGame() {
         if (showIntro) {
