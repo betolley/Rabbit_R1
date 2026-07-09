@@ -88,6 +88,7 @@
             font-weight: bold;
             padding: 2px 6px;
             cursor: pointer;
+            touch-action: none;
         }
 
         .util-btn:active {
@@ -124,6 +125,7 @@
             cursor: pointer;
             border-radius: 4px;
             box-shadow: 0 2px 0 #1a252f;
+            touch-action: none;
         }
 
         .dpad-btn:active {
@@ -157,6 +159,7 @@
             display: flex;
             justify-content: center;
             align-items: center;
+            touch-action: none;
         }
 
         .action-btn:active {
@@ -253,6 +256,7 @@
     <div class="utility-bar">
         <button id="soundBtn" class="util-btn">SFX: OFF</button>
         <button id="musicBtn" class="util-btn">MUSIC: OFF</button>
+        <button id="pauseBtn" class="util-btn">PAUSE</button>
         <button id="restartBtn" class="util-btn" style="display: none;">RESTART</button>
     </div>
 
@@ -303,6 +307,7 @@
     const intro = document.getElementById('intro');
     const soundBtn = document.getElementById('soundBtn');
     const musicBtn = document.getElementById('musicBtn');
+    const pauseBtn = document.getElementById('pauseBtn');
     const stompNotice = document.getElementById('stompNotice');
     const shrinkNotice = document.getElementById('shrinkNotice');
     const restartBtn = document.getElementById('restartBtn');
@@ -477,6 +482,7 @@
     }
 
     let score = 0, frames = 0, gameOver = false, showIntro = true;
+    let isPaused = false;
     let cameraX = 0;
     let biome = 'forest';
     const biomes = ['city', 'forest', 'lake', 'river', 'valley', 'desert', 'airport'];
@@ -617,7 +623,10 @@
             this.y = y || canvasFloor() - 20;
             this.width = 16; this.height = 20;
             this.dy = 0; this.gravity = 0.4;
-            this.speed = 0.6 + Math.random() * 0.8;
+            
+            // Reduced enemy speed for better pacing
+            this.speed = 0.3 + Math.random() * 0.4; 
+            
             this.mark = false;
             this.score = { hollowStrider: 100, gloomGnat: 120, shardbackCrawler: 150 }[type] || 100;
             this.canStomp = (type !== 'veilGnawer');
@@ -829,13 +838,25 @@
         }
     }
 
+    // Toggle Pause Functionality
+    pauseBtn.addEventListener('click', () => {
+        if (!showIntro && !gameOver) {
+            isPaused = !isPaused;
+            pauseBtn.textContent = isPaused ? 'RESUME' : 'PAUSE';
+            if (!isPaused && audioCtx && audioCtx.state === 'suspended') {
+                audioCtx.resume();
+            }
+        }
+    });
+
     function restartGame() {
-        score = 0; frames = 0; gameOver = false; showIntro = false;
+        score = 0; frames = 0; gameOver = false; showIntro = false; isPaused = false;
         scoreEl.textContent = '0';
         healthEl.textContent = '5';
         ammoEl.textContent = '20';
         sizeEl.textContent = '1x';
         heatEl.textContent = '0%';
+        pauseBtn.textContent = 'PAUSE';
         
         player.x = 40; player.y = 60;
         player.health = 5; player.ammo = 20; player.heat = 0; player.scale = 1;
@@ -855,6 +876,7 @@
         if (k === 'arrowright' || k === 'd') keys.right = true;
         if (k === 'x' || k === ' ') keys.a = true;
         if (k === 'z' || k === 'b') keys.b = true;
+        if (k === 'p' || k === 'escape') pauseBtn.click();
         if (k === 'enter') beginGame();
     });
 
@@ -868,22 +890,40 @@
         if (k === 'z' || k === 'b') keys.b = false;
     });
 
-    // Concrete Button Component Element Event Routing
-    const dpadMap = { 'pad-up': 'up', 'pad-down': 'down', 'pad-left': 'left', 'pad-right': 'right' };
-    Object.keys(dpadMap).forEach(id => {
+    // Hardware Multi-Touch Event Binding 
+    function bindControl(id, keyAction) {
         const el = document.getElementById(id);
-        el.addEventListener('pointerdown', (e) => { e.preventDefault(); keys[dpadMap[id]] = true; });
-        el.addEventListener('pointerup', (e) => { e.preventDefault(); keys[dpadMap[id]] = false; });
-        el.addEventListener('pointerleave', () => keys[dpadMap[id]] = false);
-    });
+        if (!el) return;
+        
+        const press = (e) => { 
+            e.preventDefault(); 
+            keys[keyAction] = true; 
+            if (keyAction === 'a') beginGame(); 
+        };
+        const release = (e) => { 
+            e.preventDefault(); 
+            keys[keyAction] = false; 
+        };
 
-    document.getElementById('btn-a').addEventListener('pointerdown', (e) => { e.preventDefault(); keys.a = true; beginGame(); });
-    document.getElementById('btn-a').addEventListener('pointerup', () => keys.a = false);
-    document.getElementById('btn-b').addEventListener('pointerdown', (e) => { e.preventDefault(); keys.b = true; });
-    document.getElementById('btn-b').addEventListener('pointerup', () => keys.b = false);
-    restartBtn.addEventListener('click', restartGame);
+        // Capture mobile touch natively to bypass browser tap limits
+        el.addEventListener('touchstart', press, { passive: false });
+        el.addEventListener('touchend', release, { passive: false });
+        el.addEventListener('touchcancel', release, { passive: false });
+        
+        // Desktop fallbacks
+        el.addEventListener('mousedown', press);
+        el.addEventListener('mouseup', release);
+        el.addEventListener('mouseleave', release);
+    }
+
+    bindControl('pad-up', 'up');
+    bindControl('pad-down', 'down');
+    bindControl('pad-left', 'left');
+    bindControl('pad-right', 'right');
+    bindControl('btn-a', 'a');
+    bindControl('btn-b', 'b');
     
-    // Tap to start listener
+    restartBtn.addEventListener('click', restartGame);
     intro.addEventListener('pointerdown', beginGame);
 
     function beginGame() {
@@ -999,8 +1039,21 @@
 
     function loop() {
         if (!showIntro) {
-            update();
+            // Apply Pause State Check
+            if (!isPaused) {
+                update();
+            }
             draw();
+            
+            // Draw Pause Overlay if active
+            if (isPaused) {
+                ctx.fillStyle = 'rgba(0,0,0,0.6)';
+                ctx.fillRect(0, 0, canvas.width, canvas.height);
+                ctx.fillStyle = '#ff6b6b';
+                ctx.font = 'bold 16px monospace';
+                ctx.textAlign = 'center';
+                ctx.fillText('PAUSED', canvas.width / 2, canvas.height / 2);
+            }
         }
         requestAnimationFrame(loop);
     }
