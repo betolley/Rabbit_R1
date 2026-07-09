@@ -59,7 +59,11 @@ jobs:
         run: |
           mkdir -p ./final_site/sentinelchat
           cp -r sentinelchat/* ./final_site/sentinelchat/    
-
+            # --- VeilbreakWard ---
+      - name: VeilbreakWard
+        run: |
+          mkdir -p ./final_site/veilbreakward
+          cp -r veilbreakward/* ./final_site/veilbreakward/  
       # --- CREATE A ROOT HOME PAGE ---
       - name: Create Landing Page Index
         run: |
