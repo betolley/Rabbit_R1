@@ -1,0 +1,1006 @@
+<!DOCTYPE html>
+<html lang="en">
+<head>
+    <meta charset="utf-8" />
+    <meta name="viewport" content="width=device-width, initial-scale=1.0, maximum-scale=1.0, user-scalable=no" />
+    <title>Veilbreak Ward - Handheld Edition</title>
+    <style>
+        :root {
+            --ui: #f1f1f1;
+            --accent: #ff6b6b;
+            --panel: rgba(20,20,20,0.85);
+            --bg-dark: #0b0b12;
+        }
+
+        html, body {
+            height: 100%;
+            margin: 0;
+            background: #111;
+            font-family: 'Segoe UI', Tahoma, Geneva, Verdana, sans-serif;
+            user-select: none;
+            -webkit-user-select: none;
+            display: flex;
+            justify-content: center;
+            align-items: center;
+        }
+
+        /* RC Racing Container Framework */
+        #app {
+            width: 240px;
+            height: 340px;
+            background: #000;
+            position: relative;
+            display: flex;
+            flex-direction: column;
+            overflow: hidden;
+            border: 4px solid #34495e;
+            border-radius: 12px;
+            box-shadow: 0 12px 36px rgba(0,0,0,0.7);
+        }
+
+        /* Upper Info Overlay Styled from RC Racing */
+        #debug-overlay {
+            background: #1a1a24;
+            color: var(--ui);
+            padding: 4px 6px;
+            font-family: monospace;
+            font-size: 9px;
+            border-bottom: 2px solid #2c3e50;
+            z-index: 10;
+            display: flex;
+            flex-direction: column;
+            gap: 2px;
+        }
+
+        .hud-row {
+            display: flex;
+            justify-content: space-between;
+            width: 100%;
+        }
+
+        .hud-row span strong {
+            color: var(--accent);
+        }
+
+        /* Fixed Game Canvas */
+        #game-canvas {
+            width: 240px;
+            height: 180px;
+            background: #05070a;
+            display: block;
+        }
+
+        /* Utility Toggles Row */
+        .utility-bar {
+            background: #2c3e50;
+            display: flex;
+            justify-content: space-around;
+            padding: 3px 0;
+            border-bottom: 1px solid #444;
+        }
+
+        .util-btn {
+            background: rgba(0,0,0,0.4);
+            color: #fff;
+            border: 1px solid #555;
+            border-radius: 4px;
+            font-size: 8px;
+            font-weight: bold;
+            padding: 2px 6px;
+            cursor: pointer;
+        }
+
+        .util-btn:active {
+            background: var(--accent);
+        }
+
+        /* Gamepad Controls Panel */
+        .controls-panel {
+            flex: 1;
+            background: #222;
+            display: flex;
+            padding: 8px;
+            justify-content: space-between;
+            align-items: center;
+            border-top: 1px solid #444;
+        }
+
+        /* D-Pad Configuration Grid */
+        .dpad {
+            display: grid;
+            grid-template-columns: repeat(3, 26px);
+            grid-template-rows: repeat(3, 26px);
+            gap: 2px;
+        }
+
+        .dpad-btn {
+            background: #34495e;
+            color: #fff;
+            display: flex;
+            justify-content: center;
+            align-items: center;
+            font-size: 11px;
+            font-weight: bold;
+            cursor: pointer;
+            border-radius: 4px;
+            box-shadow: 0 2px 0 #1a252f;
+        }
+
+        .dpad-btn:active {
+            background: #415b76;
+            transform: translateY(1px);
+            box-shadow: 0 1px 0 #1a252f;
+        }
+
+        .empty-slot {
+            visibility: hidden;
+        }
+
+        /* Action Keys Layout */
+        .action-buttons {
+            display: flex;
+            gap: 12px;
+            padding-right: 4px;
+        }
+
+        .action-btn {
+            width: 38px;
+            height: 38px;
+            border-radius: 50%;
+            border: none;
+            background: #e74c3c;
+            color: white;
+            font-weight: 900;
+            font-size: 15px;
+            cursor: pointer;
+            box-shadow: 0 3px 0 #c0392b;
+            display: flex;
+            justify-content: center;
+            align-items: center;
+        }
+
+        .action-btn:active {
+            transform: translateY(1px);
+            box-shadow: 0 2px 0 #c0392b;
+        }
+
+        /* Notifications & Splash Screens */
+        #stompNotice, #shrinkNotice {
+            position: absolute;
+            left: 50%;
+            top: 25%;
+            transform: translateX(-50%);
+            z-index: 60;
+            padding: 4px 8px;
+            border-radius: 4px;
+            color: #fff;
+            font-weight: 900;
+            font-size: 10px;
+            display: none;
+            box-shadow: 0 2px 8px rgba(0,0,0,0.5);
+            text-align: center;
+            white-space: nowrap;
+        }
+
+        #stompNotice { background: rgba(255,107,107,0.95); }
+        #shrinkNotice { background: rgba(46,204,113,0.95); color: #042; }
+
+        #intro {
+            position: absolute;
+            inset: 0;
+            display: flex;
+            align-items: center;
+            justify-content: center;
+            z-index: 50;
+            background: var(--bg-dark);
+            color: var(--ui);
+            text-align: center;
+            padding: 12px;
+            box-sizing: border-box;
+        }
+
+        #intro h1 {
+            font-size: 16px;
+            letter-spacing: 2px;
+            margin: 0 0 6px;
+            color: #ff6b6b;
+            text-shadow: 0 2px 4px rgba(255,107,107,0.3);
+        }
+
+        #intro p {
+            font-size: 8px;
+            line-height: 1.3;
+            margin: 4px 0;
+            color: #ccc;
+        }
+
+        #intro .hint {
+            margin-top: 10px;
+            color: var(--accent);
+            font-weight: 800;
+            font-size: 9px;
+            animation: pulse 1.2s infinite alternate;
+        }
+
+        @keyframes pulse {
+            from { opacity: 0.5; }
+            to { opacity: 1; }
+        }
+    </style>
+</head>
+<body>
+
+<div id="app">
+    <!-- Combined Header Ribbon HUD -->
+    <div id="debug-overlay">
+        <div class="hud-row">
+            <span>HP: <strong id="health">5</strong></span>
+            <span>AMMO: <strong id="ammo">20</strong></span>
+            <span>SCORE: <strong id="score">0</strong></span>
+        </div>
+        <div class="hud-row">
+            <span>BIOME: <strong id="biomeLabel">forest</strong></span>
+            <span>SIZE: <strong id="size">1x</strong></span>
+            <span>HEAT: <strong id="heat">0%</strong></span>
+        </div>
+    </div>
+
+    <!-- Gameplay Area -->
+    <canvas id="game-canvas" width="240" height="180"></canvas>
+
+    <!-- System Control Buttons -->
+    <div class="utility-bar">
+        <button id="soundBtn" class="util-btn">SFX: OFF</button>
+        <button id="musicBtn" class="util-btn">MUSIC: OFF</button>
+        <button id="restartBtn" class="util-btn" style="display: none;">RESTART</button>
+    </div>
+
+    <!-- Screen Alerts -->
+    <div id="stompNotice">VEIL STOMP ENABLED</div>
+    <div id="shrinkNotice">Form destabilized!</div>
+
+    <!-- Game Splash / Cinematic Screen -->
+    <div id="intro">
+        <div>
+            <h1>VEILBREAK WARD</h1>
+            <p><strong>Daniel Bruce Tolley</strong>, field warden of the Astral Survey, is stationed in the Veilbreak Expanse—a frontier where reality has thinned and anomalies bleed into the world.</p>
+            <p>As fractures spread, Daniel hunts entities, recovers anchors, and holds the world together before reality completely tears apart.</p>
+            <div class="hint">Press A Button or ENTER to Start</div>
+        </div>
+    </div>
+
+    <!-- Concrete Console Button Layout -->
+    <div class="controls-panel">
+        <div class="dpad">
+            <div class="empty-slot"></div>
+            <div class="dpad-btn" id="pad-up">▲</div>
+            <div class="empty-slot"></div>
+            <div class="dpad-btn" id="pad-left">◀</div>
+            <div class="empty-slot"></div>
+            <div class="dpad-btn" id="pad-right">▶</div>
+            <div class="empty-slot"></div>
+            <div class="dpad-btn" id="pad-down">▼</div>
+            <div class="empty-slot"></div>
+        </div>
+        <div class="action-buttons">
+            <button class="action-btn" id="btn-b">B</button>
+            <button class="action-btn" id="btn-a">A</button>
+        </div>
+    </div>
+</div>
+
+<script>
+    const canvas = document.getElementById('game-canvas');
+    const ctx = canvas.getContext('2d');
+    
+    const scoreEl = document.getElementById('score');
+    const healthEl = document.getElementById('health');
+    const ammoEl = document.getElementById('ammo');
+    const sizeEl = document.getElementById('size');
+    const heatEl = document.getElementById('heat');
+    const biomeLabel = document.getElementById('biomeLabel');
+    const intro = document.getElementById('intro');
+    const soundBtn = document.getElementById('soundBtn');
+    const musicBtn = document.getElementById('musicBtn');
+    const stompNotice = document.getElementById('stompNotice');
+    const shrinkNotice = document.getElementById('shrinkNotice');
+    const restartBtn = document.getElementById('restartBtn');
+
+    // Enforce static handheld canvas viewport bounds
+    function resize() {
+        canvas.width = 240;
+        canvas.height = 180;
+    }
+    window.addEventListener('resize', resize);
+    resize();
+
+    let audioCtx = null;
+    let sfxEnabled = false;
+    let musicEnabled = false;
+    let musicInterval = null;
+
+    function ensureAudio() {
+        if (!audioCtx) {
+            audioCtx = new (window.AudioContext || window.webkitAudioContext)();
+        }
+    }
+
+    function createNoiseBuffer(duration = 0.2) {
+        if(!audioCtx) return null;
+        const sampleRate = audioCtx.sampleRate;
+        const buffer = audioCtx.createBuffer(1, sampleRate * duration, sampleRate);
+        const data = buffer.getChannelData(0);
+        for (let i = 0; i < data.length; i++) {
+            data[i] = (Math.random() * 2 - 1) * Math.exp(-i / (sampleRate * duration * 0.6));
+        }
+        return buffer;
+    }
+
+    function makeDistortionCurve(amount) {
+        const k = typeof amount === 'number' ? amount : 50;
+        const n_samples = 44100;
+        const curve = new Float32Array(n_samples);
+        const deg = Math.PI / 180;
+        for (let i = 0; i < n_samples; ++i) {
+            const x = (i * 2) / n_samples - 1;
+            curve[i] = (3 + k) * x * 20 * deg / (Math.PI + k * Math.abs(x));
+        }
+        return curve;
+    }
+
+    function playRockBeat() {
+        if (!audioCtx || !musicEnabled) return;
+        const now = audioCtx.currentTime;
+        
+        const kick = audioCtx.createOscillator();
+        const kg = audioCtx.createGain();
+        kick.type = 'sine';
+        kick.frequency.setValueAtTime(80, now);
+        kick.frequency.exponentialRampToValueAtTime(40, now + 0.12);
+        kg.gain.setValueAtTime(0.9, now);
+        kg.gain.exponentialRampToValueAtTime(0.001, now + 0.18);
+        kick.connect(kg);
+        kg.connect(audioCtx.destination);
+        kick.start(now);
+        kick.stop(now + 0.18);
+
+        const snareBuf = createNoiseBuffer(0.18);
+        if (snareBuf) {
+            const snare = audioCtx.createBufferSource();
+            snare.buffer = snareBuf;
+            const snG = audioCtx.createGain();
+            snG.gain.setValueAtTime(0.6, now + 0.08);
+            snG.gain.exponentialRampToValueAtTime(0.001, now + 0.22);
+            const snFilter = audioCtx.createBiquadFilter();
+            snFilter.type = 'bandpass';
+            snFilter.frequency.setValueAtTime(1800, now);
+            snare.connect(snFilter);
+            snFilter.connect(snG);
+            snG.connect(audioCtx.destination);
+            snare.start(now + 0.08);
+            snare.stop(now + 0.26);
+        }
+
+        const guitar = audioCtx.createOscillator();
+        const gGain = audioCtx.createGain();
+        const waveshaper = audioCtx.createWaveShaper();
+        waveshaper.curve = makeDistortionCurve(40);
+        waveshaper.oversample = '4x';
+        guitar.type = 'sawtooth';
+        guitar.frequency.setValueAtTime(220 + Math.random() * 40, now + 0.06);
+        gGain.gain.setValueAtTime(0.18, now + 0.06);
+        gGain.gain.exponentialRampToValueAtTime(0.001, now + 0.26);
+        guitar.connect(waveshaper);
+        waveshaper.connect(gGain);
+        gGain.connect(audioCtx.destination);
+        guitar.start(now + 0.06);
+        guitar.stop(now + 0.26);
+    }
+
+    function playShoot() {
+        if (!audioCtx || !sfxEnabled) return;
+        const now = audioCtx.currentTime;
+        const o = audioCtx.createOscillator();
+        const g = audioCtx.createGain();
+        o.type = 'square';
+        o.frequency.setValueAtTime(900, now);
+        o.frequency.exponentialRampToValueAtTime(220, now + 0.12);
+        g.gain.setValueAtTime(0.28, now);
+        g.gain.exponentialRampToValueAtTime(0.001, now + 0.14);
+        o.connect(g);
+        g.connect(audioCtx.destination);
+        o.start(now);
+        o.stop(now + 0.14);
+    }
+
+    function playMonster() {
+        if (!audioCtx || !sfxEnabled) return;
+        const now = audioCtx.currentTime;
+        const o = audioCtx.createOscillator();
+        const g = audioCtx.createGain();
+        o.type = 'sawtooth';
+        o.frequency.setValueAtTime(160, now);
+        o.frequency.exponentialRampToValueAtTime(80, now + 0.28);
+        g.gain.setValueAtTime(0.22, now);
+        g.gain.exponentialRampToValueAtTime(0.001, now + 0.36);
+        o.connect(g);
+        g.connect(audioCtx.destination);
+        o.start(now);
+        o.stop(now + 0.36);
+    }
+
+    function playJump() {
+        if (!audioCtx || !sfxEnabled) return;
+        const now = audioCtx.currentTime;
+        const o = audioCtx.createOscillator();
+        const g = audioCtx.createGain();
+        o.type = 'triangle';
+        o.frequency.setValueAtTime(220, now);
+        o.frequency.exponentialRampToValueAtTime(360, now + 0.12);
+        g.gain.setValueAtTime(0.22, now);
+        g.gain.exponentialRampToValueAtTime(0.001, now + 0.18);
+        o.connect(g);
+        g.connect(audioCtx.destination);
+        o.start(now);
+        o.stop(now + 0.18);
+    }
+
+    soundBtn.addEventListener('click', () => {
+        ensureAudio();
+        if (audioCtx && audioCtx.state === 'suspended') audioCtx.resume();
+        sfxEnabled = !sfxEnabled;
+        soundBtn.textContent = sfxEnabled ? 'SFX: ON' : 'SFX: OFF';
+    });
+
+    musicBtn.addEventListener('click', () => {
+        ensureAudio();
+        if (audioCtx && audioCtx.state === 'suspended') audioCtx.resume();
+        musicEnabled = !musicEnabled;
+        musicBtn.textContent = musicEnabled ? 'MUSIC: ON' : 'MUSIC: OFF';
+        if (musicEnabled) startRockMusic();
+        else stopRockMusic();
+    });
+
+    function startRockMusic() {
+        playRockBeat();
+        if (!musicInterval) {
+            musicInterval = setInterval(playRockBeat, 250);
+        }
+    }
+
+    function stopRockMusic() {
+        if (musicInterval) {
+            clearInterval(musicInterval);
+            musicInterval = null;
+        }
+    }
+
+    let score = 0, frames = 0, gameOver = false, showIntro = true;
+    let cameraX = 0;
+    let biome = 'forest';
+    const biomes = ['city', 'forest', 'lake', 'river', 'valley', 'desert', 'airport'];
+
+    const scenery = { mountains: [], trees: [], clouds: [], relics: [] };
+    let platforms = [], ladders = [], enemies = [], bullets = [], particles = [], pickups = [], floatingTexts = [];
+
+    const keys = { up: false, down: false, left: false, right: false, a: false, b: false, start: false };
+    const keyProcessed = { a: false, b: false };
+
+    function rand(min, max) { return Math.random() * (max - min) + min; }
+    function rectColl(a, b) { 
+        return a.x < b.x + b.width && a.x + a.width > b.x && a.y < b.y + b.height && a.y + a.height > b.y; 
+    }
+    function canvasFloor() { return canvas.height - 40; }
+
+    const BulletTypes = { AETHER: "aether", SHARD: "shard", PULSE: "pulse" };
+
+    class Platform {
+        constructor(x, y, w, meta) {
+            this.x = x; this.y = y; this.width = w; this.height = 12;
+            this.mark = false; this.meta = meta || null;
+        }
+        update() {
+            if (this.x + this.width < cameraX - 100) this.mark = true;
+        }
+        draw() {
+            ctx.fillStyle = '#34495e';
+            ctx.fillRect(this.x, this.y, this.width, this.height);
+            ctx.fillStyle = '#2ecc71';
+            ctx.fillRect(this.x, this.y, this.width, 3);
+        }
+    }
+
+    class Ladder {
+        constructor(x, y, h) {
+            this.x = x; this.y = y; this.width = 16; this.height = h;
+            this.mark = false;
+        }
+        update() {
+            if (this.x + this.width < cameraX - 100) this.mark = true;
+        }
+        draw() {
+            ctx.fillStyle = '#7f8c8d';
+            ctx.fillRect(this.x, this.y, 3, this.height);
+            ctx.fillRect(this.x + this.width - 3, this.y, 3, this.height);
+            for (let i = 4; i < this.height; i += 10) {
+                ctx.fillRect(this.x, this.y + i, this.width, 2);
+            }
+        }
+    }
+
+    class Pickup {
+        constructor(x, y, type) {
+            this.x = x; this.y = y; this.width = 14; this.height = 14;
+            this.type = type; this.phase = rand(0, 5); this.mark = false;
+        }
+        update() {
+            this.phase += 0.08;
+            if (this.x + this.width < cameraX - 100) this.mark = true;
+        }
+        draw() {
+            ctx.save();
+            ctx.translate(this.x + this.width / 2, this.y + this.height / 2 + Math.sin(this.phase) * 2);
+            if (this.type === 'morrowTincture') {
+                ctx.fillStyle = '#9b59b6'; ctx.fillRect(-5, -5, 10, 10);
+            } else if (this.type === 'preservedRations') {
+                ctx.fillStyle = '#2ecc71'; ctx.fillRect(-6, -4, 12, 8);
+            } else if (this.type === 'aetherCell') {
+                ctx.fillStyle = '#f1c40f'; ctx.fillRect(-4, -6, 8, 12);
+            } else {
+                ctx.fillStyle = '#e67e22'; ctx.beginPath(); ctx.arc(0, 0, 5, 0, Math.PI*2); ctx.fill();
+            }
+            ctx.restore();
+        }
+    }
+
+    class Particle {
+        constructor(x, y, c) {
+            this.x = x; this.y = y; this.vx = rand(-2, 2); this.vy = rand(-4, -1);
+            this.size = rand(1, 4); this.color = c; this.life = 1; this.mark = false;
+        }
+        update() {
+            this.x += this.vx; this.y += this.vy;
+            this.vy += 0.2; this.life -= 0.05;
+            if (this.life <= 0) this.mark = true;
+        }
+        draw() {
+            ctx.globalAlpha = Math.max(0, this.life);
+            ctx.fillStyle = this.color;
+            ctx.fillRect(this.x, this.y, this.size, this.size);
+            ctx.globalAlpha = 1;
+        }
+    }
+
+    class FloatingText {
+        constructor(x, y, t) {
+            this.x = x; this.y = y; this.text = t; this.life = 1; this.mark = false;
+        }
+        update() {
+            this.y -= 0.5; this.life -= 0.04;
+            if (this.life <= 0) this.mark = true;
+        }
+        draw() {
+            ctx.globalAlpha = Math.max(0, this.life);
+            ctx.fillStyle = '#f1c40f';
+            ctx.font = 'bold 8px monospace';
+            ctx.fillText(this.text, this.x, this.y);
+            ctx.globalAlpha = 1;
+        }
+    }
+
+    class Bullet {
+        constructor(x, y, vx, vy, type = BulletTypes.AETHER) {
+            this.x = x; this.y = y; this.vx = vx; this.vy = vy;
+            this.type = type; this.width = 6; this.height = 6;
+            this.mark = false; this.color = '#f1c40f';
+        }
+        update() {
+            this.x += this.vx; this.y += this.vy;
+            if (biome === 'forest') this.color = '#2ecc71';
+            if (biome === 'lake' || biome === 'river') { this.vx *= 0.98; this.vy *= 0.98; }
+
+            if (this.x > cameraX + canvas.width + 50 || this.x < cameraX - 50 || this.y < -50 || this.y > canvas.height + 50) {
+                this.mark = true;
+            }
+        }
+        draw() {
+            ctx.fillStyle = this.color;
+            ctx.fillRect(this.x, this.y, this.width, this.height);
+        }
+    }
+
+    class Enemy {
+        constructor(type, x, y) {
+            this.type = type;
+            this.x = x || cameraX + canvas.width + 20;
+            this.y = y || canvasFloor() - 20;
+            this.width = 16; this.height = 20;
+            this.dy = 0; this.gravity = 0.4;
+            this.speed = 0.6 + Math.random() * 0.8;
+            this.mark = false;
+            this.score = { hollowStrider: 100, gloomGnat: 120, shardbackCrawler: 150 }[type] || 100;
+            this.canStomp = (type !== 'veilGnawer');
+        }
+        update() {
+            const px = player.x + player.width / 2;
+            const ex = this.x + this.width / 2;
+            
+            if (Math.abs(px - ex) < 120) {
+                if (px < ex) this.x -= this.speed * 1.1;
+                else this.x += this.speed * 1.1;
+            } else {
+                this.x -= this.speed;
+            }
+
+            this.dy += this.gravity;
+            this.y += this.dy;
+
+            const floor = canvasFloor();
+            if (this.y + this.height >= floor) {
+                this.y = floor - this.height;
+                this.dy = 0;
+            }
+
+            for (let p of platforms) {
+                if (this.dy >= 0 && rectColl(this, p) && (this.y + this.height - this.dy <= p.y + 4)) {
+                    this.y = p.y - this.height;
+                    this.dy = 0;
+                }
+            }
+
+            if (this.x + this.width < cameraX - 100) this.mark = true;
+        }
+        draw() {
+            ctx.fillStyle = this.type === 'gloomGnat' ? '#9b59b6' : '#e74c3c';
+            ctx.fillRect(this.x, this.y, this.width, this.height);
+            ctx.fillStyle = '#000';
+            ctx.fillRect(this.x + 3, this.y + 4, 3, 3);
+        }
+    }
+
+    class Player {
+        constructor() {
+            this.baseW = 12; this.baseH = 22;
+            this.width = this.baseW; this.height = this.baseH;
+            this.x = 40; this.y = 60;
+            this.dx = 0; this.dy = 0;
+            this.speed = 2.2; this.climbSpeed = 1.5;
+            this.gravity = 0.4; this.jumpForce = -7.5;
+            this.grounded = false; this.isClimbing = false;
+            this.facing = true; this.scale = 1;
+            this.health = 5; this.ammo = 20; this.maxAmmo = 20;
+            this.heat = 0; this.maxHeat = 100;
+            this.heatPerShot = 12; this.coolRate = 0.8;
+            this.overheated = false;
+        }
+        setScale(s) {
+            this.scale = Math.max(1, Math.min(3, s));
+            this.width = this.baseW * this.scale;
+            this.height = this.baseH * this.scale;
+            sizeEl.textContent = this.scale.toFixed(1) + "x";
+            if (this.scale >= 3) flashStompNotice();
+        }
+        growBy(amount) { this.setScale(this.scale + amount); }
+        shrinkBy(amount) {
+            this.setScale(this.scale - amount);
+            shrinkNotice.style.display = 'block';
+            setTimeout(() => { shrinkNotice.style.display = 'none'; }, 900);
+        }
+        refillAmmo(amount) {
+            this.ammo = Math.min(this.maxAmmo, this.ammo + amount);
+            ammoEl.textContent = this.ammo;
+        }
+        canStomp() { return this.scale >= 2.5; }
+        jump() {
+            if (this.grounded || this.isClimbing) {
+                this.isClimbing = false;
+                this.dy = this.jumpForce;
+                this.grounded = false;
+                for (let i = 0; i < 4; i++) {
+                    particles.push(new Particle(this.x + this.width / 2, this.y + this.height, '#fff'));
+                }
+                playJump();
+            }
+        }
+        shootGun() {
+            if (this.overheated || this.ammo <= 0) {
+                floatingTexts.push(new FloatingText(this.x, this.y - 6, this.overheated ? 'OVERHEAT' : 'NO AMMO'));
+                return;
+            }
+            this.ammo -= 1;
+            ammoEl.textContent = this.ammo;
+            
+            let vx = this.facing ? 5 : -5;
+            let vy = 0;
+            if (keys.up) { vy = -5; vx = 0; }
+            if (keys.down) { vy = 5; vx = 0; }
+
+            bullets.push(new Bullet(this.x + this.width / 2, this.y + this.height / 3, vx, vy));
+            playShoot();
+
+            this.heat += this.heatPerShot;
+            if (this.heat >= this.maxHeat) {
+                this.overheated = true;
+                this.heat = this.maxHeat;
+            }
+        }
+        update() {
+            let touchingLadder = false;
+            for (let l of ladders) {
+                if (rectColl(this, l)) { touchingLadder = true; break; }
+            }
+
+            if (touchingLadder && keys.up) this.isClimbing = true;
+            if (!touchingLadder) this.isClimbing = false;
+
+            if (this.isClimbing) {
+                this.dy = 0;
+                if (keys.up) this.y -= this.climbSpeed;
+                if (keys.down) this.y += this.climbSpeed;
+                if (keys.left) { this.x -= this.speed; this.facing = false; }
+                if (keys.right) { this.x += this.speed; this.facing = true; }
+            } else {
+                if (keys.left) { this.dx = -this.speed; this.facing = false; }
+                else if (keys.right) { this.dx = this.speed; this.facing = true; }
+                else { this.dx = 0; }
+                
+                this.x += this.dx;
+                this.dy += this.gravity;
+                this.y += this.dy;
+            }
+
+            const floor = canvasFloor();
+            if (this.y + this.height >= floor) {
+                this.y = floor - this.height;
+                this.dy = 0;
+                this.grounded = true;
+            }
+
+            if (!this.isClimbing) {
+                for (let p of platforms) {
+                    if (this.dy >= 0 && rectColl(this, p) && (this.y + this.height - this.dy <= p.y + 4)) {
+                        this.y = p.y - this.height;
+                        this.dy = 0;
+                        this.grounded = true;
+                    }
+                }
+            }
+
+            if (this.heat > 0) {
+                this.heat -= this.coolRate;
+                if (this.heat < 0) this.heat = 0;
+            }
+            if (this.overheated && this.heat <= 20) this.overheated = false;
+            heatEl.textContent = Math.floor((this.heat / this.maxHeat) * 100) + '%';
+        }
+        draw() {
+            ctx.save();
+            ctx.fillStyle = this.overheated ? '#e74c3c' : '#3498db';
+            ctx.fillRect(this.x, this.y, this.width, this.height);
+            // Visor line facing direction
+            ctx.fillStyle = '#fff';
+            if (this.facing) ctx.fillRect(this.x + this.width - 3, this.y + 4, 3, 3);
+            else ctx.fillRect(this.x, this.y + 4, 3, 3);
+            ctx.restore();
+        }
+    }
+
+    const player = new Player();
+
+    function spawnInitialScenery() {
+        platforms = [
+            new Platform(10, 110, 80),
+            new Platform(110, 90, 70),
+            new Platform(60, 50, 60)
+        ];
+        ladders = [
+            new Ladder(84, 90, 50),
+            new Ladder(120, 50, 40)
+        ];
+        enemies = [new Enemy('hollowStrider', 130, 70)];
+        pickups = [new Pickup(70, 30, 'aetherCell')];
+    }
+    spawnInitialScenery();
+
+    function spawnGenerators() {
+        if (frames % 140 === 0) {
+            const nextX = cameraX + canvas.width + rand(10, 40);
+            const nextY = rand(60, 110);
+            platforms.push(new Platform(nextX, nextY, rand(40, 80)));
+            if (Math.random() < 0.4) ladders.push(new Ladder(nextX + 10, nextY, 40));
+            if (Math.random() < 0.5) enemies.push(new Enemy(Math.random() < 0.5 ? 'gloomGnat' : 'hollowStrider', nextX + 20, nextY - 22));
+            if (Math.random() < 0.3) pickups.push(new Pickup(nextX + 5, nextY - 15, Math.random() < 0.5 ? 'morrowTincture' : 'aetherCell'));
+        }
+    }
+
+    function flashStompNotice() {
+        stompNotice.style.display = 'block';
+        setTimeout(() => { stompNotice.style.display = 'none'; }, 900);
+    }
+
+    function damagePlayer() {
+        if (player.scale > 1) {
+            player.shrinkBy(0.5);
+        } else {
+            player.health -= 1;
+            healthEl.textContent = player.health;
+            if (player.health <= 0) gameOver = true;
+        }
+    }
+
+    function restartGame() {
+        score = 0; frames = 0; gameOver = false; showIntro = false;
+        scoreEl.textContent = '0';
+        healthEl.textContent = '5';
+        ammoEl.textContent = '20';
+        sizeEl.textContent = '1x';
+        heatEl.textContent = '0%';
+        
+        player.x = 40; player.y = 60;
+        player.health = 5; player.ammo = 20; player.heat = 0; player.scale = 1;
+        player.overheated = false; player.isClimbing = false;
+
+        platforms = []; ladders = []; enemies = []; bullets = []; particles = []; pickups = []; floatingTexts = [];
+        spawnInitialScenery();
+        restartBtn.style.display = "none";
+    }
+
+    // Keyboard Input Processing
+    window.addEventListener('keydown', e => {
+        const k = e.key.toLowerCase();
+        if (k === 'arrowup' || k === 'w') keys.up = true;
+        if (k === 'arrowdown' || k === 's') keys.down = true;
+        if (k === 'arrowleft' || k === 'a') keys.left = true;
+        if (k === 'arrowright' || k === 'd') keys.right = true;
+        if (k === 'x' || k === ' ') keys.a = true;
+        if (k === 'z' || k === 'b') keys.b = true;
+        if (k === 'enter') beginGame();
+    });
+
+    window.addEventListener('keyup', e => {
+        const k = e.key.toLowerCase();
+        if (k === 'arrowup' || k === 'w') keys.up = false;
+        if (k === 'arrowdown' || k === 's') keys.down = false;
+        if (k === 'arrowleft' || k === 'a') keys.left = false;
+        if (k === 'arrowright' || k === 'd') keys.right = false;
+        if (k === 'x' || k === ' ') keys.a = false;
+        if (k === 'z' || k === 'b') keys.b = false;
+    });
+
+    // Concrete Button Component Element Event Routing
+    const dpadMap = { 'pad-up': 'up', 'pad-down': 'down', 'pad-left': 'left', 'pad-right': 'right' };
+    Object.keys(dpadMap).forEach(id => {
+        const el = document.getElementById(id);
+        el.addEventListener('pointerdown', (e) => { e.preventDefault(); keys[dpadMap[id]] = true; });
+        el.addEventListener('pointerup', (e) => { e.preventDefault(); keys[dpadMap[id]] = false; });
+        el.addEventListener('pointerleave', () => keys[dpadMap[id]] = false);
+    });
+
+    document.getElementById('btn-a').addEventListener('pointerdown', (e) => { e.preventDefault(); keys.a = true; beginGame(); });
+    document.getElementById('btn-a').addEventListener('pointerup', () => keys.a = false);
+    document.getElementById('btn-b').addEventListener('pointerdown', (e) => { e.preventDefault(); keys.b = true; });
+    document.getElementById('btn-b').addEventListener('pointerup', () => keys.b = false);
+    restartBtn.addEventListener('click', restartGame);
+
+    function beginGame() {
+        if (showIntro) {
+            showIntro = false;
+            intro.style.display = 'none';
+            ensureAudio();
+        }
+        if (gameOver) restartGame();
+    }
+
+    function update() {
+        if (gameOver) {
+            restartBtn.style.display = "block";
+            return;
+        }
+        frames++;
+        spawnGenerators();
+        player.update();
+        
+        // Track fluid camera focus scroll center position
+        cameraX = player.x - canvas.width * 0.3;
+
+        platforms.forEach(p => p.update());
+        ladders.forEach(l => l.update());
+        enemies.forEach(e => e.update());
+        bullets.forEach(b => b.update());
+        particles.forEach(p => p.update());
+        pickups.forEach(p => p.update());
+        floatingTexts.forEach(f => f.update());
+
+        // Bullet Combat Interaction Collision Loops
+        for (let b of bullets) {
+            for (let en of enemies) {
+                if (!b.mark && !en.mark && rectColl(b, en)) {
+                    en.mark = true; b.mark = true;
+                    score += en.score;
+                    scoreEl.textContent = score;
+                    floatingTexts.push(new FloatingText(en.x, en.y, '+' + en.score));
+                    playMonster();
+                    for(let i=0; i<6; i++) particles.push(new Particle(en.x, en.y, '#e67e22'));
+                }
+            }
+        }
+
+        // Drop Item Interaction Processing
+        for (let pu of pickups) {
+            if (!pu.mark && rectColl(player, pu)) {
+                pu.mark = true;
+                if (pu.type === 'morrowTincture') {
+                    player.health = Math.min(9, player.health + 1);
+                    healthEl.textContent = player.health;
+                } else if (pu.type === 'aetherCell') {
+                    player.refillAmmo(10);
+                }
+                floatingTexts.push(new FloatingText(player.x, player.y - 10, 'ITEM GRAB'));
+            }
+        }
+
+        // Enemy Combat Interaction Resolution Loop
+        for (let en of enemies) {
+            if (!en.mark && rectColl(player, en)) {
+                if (player.canStomp() && player.dy > 0 && (player.y + player.height <= en.y + 8)) {
+                    en.mark = true;
+                    score += en.score * 2;
+                    scoreEl.textContent = score;
+                    player.dy = player.jumpForce * 0.5;
+                    floatingTexts.push(new FloatingText(en.x, en.y, 'STOMP!'));
+                } else {
+                    damagePlayer();
+                }
+            }
+        }
+
+        // Frame cleanups
+        platforms = platforms.filter(p => !p.mark);
+        ladders = ladders.filter(l => !l.mark);
+        enemies = enemies.filter(e => !e.mark);
+        bullets = bullets.filter(b => !b.mark);
+        particles = particles.filter(p => !p.mark);
+        pickups = pickups.filter(p => !p.mark);
+        floatingTexts = floatingTexts.filter(f => !f.mark);
+
+        // Control Buffer Action Executions
+        if (keys.a && !keyProcessed.a) { player.jump(); keyProcessed.a = true; }
+        if (!keys.a) keyProcessed.a = false;
+        if (keys.b && !keyProcessed.b) { player.shootGun(); keyProcessed.b = true; }
+        if (!keys.b) keyProcessed.b = false;
+    }
+
+    function draw() {
+        ctx.fillStyle = '#05070a';
+        ctx.fillRect(0, 0, canvas.width, canvas.height);
+
+        ctx.save();
+        ctx.translate(-cameraX, 0); // Translate camera view port context
+
+        platforms.forEach(p => p.draw());
+        ladders.forEach(l => l.draw());
+        pickups.forEach(p => p.draw());
+        enemies.forEach(e => e.draw());
+        bullets.forEach(b => b.draw());
+        player.draw();
+        particles.forEach(p => p.draw());
+        floatingTexts.forEach(f => f.draw());
+
+        ctx.restore();
+
+        // Screen boundary frame floor ground line graphic 
+        ctx.fillStyle = '#2c3e50';
+        ctx.fillRect(0, canvasFloor(), canvas.width, 40);
+    }
+
+    function loop() {
+        if (!showIntro) {
+            update();
+            draw();
+        }
+        requestAnimationFrame(loop);
+    }
+    loop();
+</script>
+</body>
+</html>
