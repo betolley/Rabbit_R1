@@ -1,5 +1,3 @@
-[PIPE:bash]
-cat << 'EOF' > index.html
 <!DOCTYPE html>
 <html lang="en">
 <head>
@@ -24,18 +22,12 @@ cat << 'EOF' > index.html
             user-select: none;
             -webkit-user-select: none;
             overflow: hidden;
-            /* Force exact scaling for 240x282 if rendered outside strict device bounds */
-            display: flex;
-            justify-content: center;
-            align-items: center;
         }
 
-        /* Responsive container explicitly tailored for the Rabbit R1 aspect ratio */
+        /* Responsive container explicitly tailored to fill the webview entirely */
         #app {
-            width: 100vw;
-            height: 100vh;
-            max-width: 480px;
-            max-height: 564px;
+            width: 100%;
+            height: 100%;
             background: #000;
             position: relative;
             display: flex;
@@ -75,7 +67,7 @@ cat << 'EOF' > index.html
         /* Dynamically sizing canvas area via Flexbox layout constraints */
         #game-canvas {
             width: 100%;
-            flex: 1; /* Inherits the remaining exactly ~149px */
+            flex: 1; 
             background: #05070a;
             display: block;
             min-height: 0; /* Critical browser patch for flex truncation */
@@ -1078,4 +1070,3 @@ cat << 'EOF' > index.html
 </script>
 </body>
 </html>
-EOF
