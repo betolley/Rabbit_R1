@@ -1,4 +1,3 @@
-cat << 'EOF' > game.html
 <!DOCTYPE html>
 <html lang="en">
 <head>
@@ -132,17 +131,17 @@ cat << 'EOF' > game.html
             image-rendering: pixelated;
         }
 
-        /* Micro Debug Panel for developer feedback */
+        /* Micro Debug Panel for developer feedback - Positioned at top right */
         #debug-panel {
             position: absolute;
-            bottom: 4px;
-            left: 4px;
-            background: rgba(0,0,0,0.8);
+            top: 18px;
+            right: 4px;
+            background: rgba(0,0,0,0.85);
             border: 1px solid var(--accent-color);
             color: #00ff00;
             padding: 2px 4px;
             font-size: 7px;
-            pointer-events: none;
+            cursor: pointer;
             border-radius: 2px;
             z-index: 5;
             line-height: 1.1;
@@ -284,6 +283,14 @@ cat << 'EOF' > game.html
                 <input type="range" id="slider-vol" min="0" max="100" step="5" value="70">
             </div>
 
+            <div class="setup-group">
+                <div class="setup-row">
+                    <label>DIAG PANEL</label>
+                    <span id="val-diag">ON</span>
+                </div>
+                <input type="range" id="slider-diag" min="0" max="1" step="1" value="1">
+            </div>
+
             <div class="setup-buttons">
                 <button class="setup-btn" id="btn-save">Save</button>
                 <button class="setup-btn" id="btn-load">Load</button>
@@ -296,7 +303,7 @@ cat << 'EOF' > game.html
             <canvas id="gameCanvas"></canvas>
             
             <!-- Real-time Diagnostics -->
-            <div id="debug-panel">
+            <div id="debug-panel" title="Click to Hide">
                 FPS: <span id="db-fps">60</span> | MODE: <span id="db-mode">PLAY</span><br>
                 SEED: <span id="db-seed">12345</span> | ZOOM: <span id="db-zoom">1.0x</span><br>
                 X: <span id="db-x">0</span> Y: <span id="db-y">0</span> | STATE: <span id="db-state">SMALL</span>
@@ -806,6 +813,8 @@ cat << 'EOF' > game.html
         const sldSpeed = document.getElementById('slider-speed');
         const sldSfx = document.getElementById('slider-sfx');
         const sldVol = document.getElementById('slider-vol');
+        const sldDiag = document.getElementById('slider-diag');
+        const debugPanel = document.getElementById('debug-panel');
 
         sldZoom.addEventListener('input', () => {
             zoomScale = parseFloat(sldZoom.value);
@@ -826,6 +835,19 @@ cat << 'EOF' > game.html
         sldVol.addEventListener('input', () => {
             masterVolume = parseFloat(sldVol.value) / 100;
             document.getElementById('val-vol').textContent = sldVol.value + '%';
+        });
+
+        sldDiag.addEventListener('input', () => {
+            const isDiagOn = sldDiag.value === '1';
+            document.getElementById('val-diag').textContent = isDiagOn ? 'ON' : 'OFF';
+            debugPanel.style.display = isDiagOn ? 'block' : 'none';
+        });
+
+        // Click on diagnostic window directly to turn it off
+        debugPanel.addEventListener('click', () => {
+            debugPanel.style.display = 'none';
+            sldDiag.value = '0';
+            document.getElementById('val-diag').textContent = 'OFF';
         });
 
         document.getElementById('btn-jump').addEventListener('pointerdown', (e) => {
@@ -914,4 +936,3 @@ cat << 'EOF' > game.html
     </script>
 </body>
 </html>
-EOF
