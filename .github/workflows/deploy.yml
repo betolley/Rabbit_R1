@@ -51,7 +51,7 @@ jobs:
       - name: Build CalorieCounter2
         run: |
           cd CalorieCounter2
-          cp -r CalorieCounter2/* ../final_site/CalorieCounter2
+          cp -r CalorieCounter2/index.html ../final_site/CalorieCounter2
           ls ../final_site/CalorieCounter2
 
       # --- BUILD PROG 3 ---
