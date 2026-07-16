@@ -47,12 +47,11 @@ jobs:
           npm run build
           cp -r dist ../final_site/CalorieCounter
 
-      # --- BUILD PROG 2b ---
-      - name: Build CalorieCounter2
+          # --- CalorieCounter2 ---
+      - name: Build and Copy CalorieCounter2
         run: |
           mkdir -p ./final_site/CalorieCounter2
-          cp -r CalorieCounter2/index.html ../final_site/CalorieCounter2
-          ls ../final_site/CalorieCounter2
+          cp -r CalorieCounter/* ./final_site/CalorieCounter2/
 
       # --- BUILD PROG 3 ---
       - name: Build OldCountryMusic
