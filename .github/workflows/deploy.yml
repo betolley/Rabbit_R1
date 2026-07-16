@@ -51,9 +51,8 @@ jobs:
       - name: Build CalorieCounter2
         run: |
           cd CalorieCounter2
-          npm install
-          npm run build
-          cp -r dist ../final_site/CalorieCounter2
+          cp -r CalorieCounter2/* ../final_site/CalorieCounter2
+          ls ../final_site/CalorieCounter2
 
       # --- BUILD PROG 3 ---
       - name: Build OldCountryMusic
