@@ -51,7 +51,7 @@ jobs:
       - name: Build and Copy CalorieCounter2
         run: |
           mkdir -p ./final_site/CalorieCounter2
-          cp -r CalorieCounter/* ./final_site/CalorieCounter2/
+          cp -r CalorieCounter2/* ./final_site/CalorieCounter2/
 
       # --- BUILD PROG 3 ---
       - name: Build OldCountryMusic
