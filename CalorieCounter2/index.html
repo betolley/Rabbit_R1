@@ -187,13 +187,13 @@
         }
         .food-actions {
             display: flex;
-            gap: 8px;
+            gap: 4px;
             align-items: center;
         }
         .action-icon {
             background: none;
             border: none;
-            font-size: 11px;
+            font-size: 10px;
             color: var(--text-gray);
             cursor: pointer;
             padding: 2px;
@@ -486,7 +486,7 @@
             </div>
         </div>
 
-        <!-- EMAIL EXPORTER OVERLAY -->
+        <!-- EMAIL EXPORTER OVERLAY (Updated for Rabbit OS Integration) -->
         <div id="email-overlay" class="overlay hidden">
             <div class="overlay-header">
                 <span>Email Food Journal</span>
@@ -523,6 +523,7 @@
 
         // Save & Load Engine
         function loadSavedData() {
+            // Priority 1: Check temporary session memory to keep states alive when jumping tabs
             const sessionData = sessionStorage.getItem(SESSION_KEY);
             const localData = localStorage.getItem(STORAGE_KEY);
             
@@ -537,6 +538,7 @@
 
         function saveData() {
             const dataString = JSON.stringify(trackerData);
+            // Sync to both LocalStorage & SessionStorage
             localStorage.setItem(STORAGE_KEY, dataString);
             sessionStorage.setItem(SESSION_KEY, dataString);
         }
@@ -579,6 +581,7 @@
             const dateStr = getISODate(currentDate);
             document.getElementById('date-display').textContent = getFriendlyDateLabel(currentDate);
 
+            // Compute metrics for active date across ALL meals
             let totCal = 0, totProt = 0, totCarb = 0, totFat = 0;
             const meals = ['breakfast', 'lunch', 'supper'];
             
@@ -600,6 +603,7 @@
             document.getElementById('total-carbs').textContent = Math.round(totCarb) + 'g';
             document.getElementById('total-fat').textContent = Math.round(totFat) + 'g';
 
+            // Draw food list for selected meal
             const foodListContainer = document.getElementById('food-list');
             const mealItems = (trackerData[dateStr] && trackerData[dateStr][selectedMealTab]) ? trackerData[dateStr][selectedMealTab] : [];
 
@@ -616,7 +620,6 @@
                         <div class="food-row">
                             <div class="food-name">${item.name}</div>
                             <div class="food-actions">
-                                <button class="action-icon" onclick="moveItem(${idx})" title="Move Meal">🔁</button>
                                 <button class="action-icon" onclick="deleteItem(${idx})" title="Delete">✕</button>
                             </div>
                         </div>
@@ -632,7 +635,7 @@
             }
         }
 
-        // Add, Delete, and Move elements
+        // Add elements
         function addFoodItem(meal, name, cal, prot, carb, fat, base64Photo = null) {
             const dateStr = getISODate(currentDate);
             if (!trackerData[dateStr]) trackerData[dateStr] = {};
@@ -658,33 +661,6 @@
                 saveData();
                 updateUI();
                 showStatus("Item deleted");
-            }
-        }
-
-        function moveItem(index) {
-            const dateStr = getISODate(currentDate);
-            const meals = ['breakfast', 'lunch', 'supper'];
-            
-            if (trackerData[dateStr] && trackerData[dateStr][selectedMealTab]) {
-                // Get the current meal index and calculate the next one in the cycle
-                const currentMealIndex = meals.indexOf(selectedMealTab);
-                const nextMealIndex = (currentMealIndex + 1) % meals.length;
-                const nextMeal = meals[nextMealIndex];
-
-                // Remove from current meal
-                const item = trackerData[dateStr][selectedMealTab].splice(index, 1)[0];
-                
-                // Ensure target meal array exists
-                if (!trackerData[dateStr][nextMeal]) {
-                    trackerData[dateStr][nextMeal] = [];
-                }
-                
-                // Add to new meal
-                trackerData[dateStr][nextMeal].push(item);
-                
-                saveData();
-                updateUI();
-                showStatus(`Moved to ${nextMeal.charAt(0).toUpperCase() + nextMeal.slice(1)}`);
             }
         }
 
@@ -728,6 +704,7 @@
             const scanMode = document.querySelector('input[name="scan-type"]:checked').value;
             showStatus(`Analyzing ${scanMode}...`, true);
 
+            // Forward image directly to Rabbit's AI processing unit or emulate local parser fallback
             setTimeout(() => {
                 let emulatedName = "Scanned Food";
                 let emulatedCal = 250, emulatedP = 15, emulatedC = 20, emulatedF = 8;
@@ -751,6 +728,7 @@
         function setupVoicePTT() {
             const micBtn = document.getElementById('mic-btn');
             
+            // Web Speech API fallback
             const SpeechRecognition = window.SpeechRecognition || window.webkitSpeechRecognition;
             let recognition = null;
             if (SpeechRecognition) {
@@ -781,6 +759,7 @@
                 };
             }
 
+            // Bind click & simple hold mechanics suited for simulated PTT
             micBtn.addEventListener('click', () => {
                 if (recognition) {
                     if (isRecording) {
@@ -789,6 +768,7 @@
                         recognition.start();
                     }
                 } else {
+                    // Simulated response when voice API is absent
                     showStatus("Synthesizing voice info...", true);
                     setTimeout(() => {
                         addFoodItem(selectedMealTab, "Voice Logged Apple", 95, 0, 25, 0);
@@ -799,9 +779,10 @@
         }
 
         function processVoiceFood(text) {
+            // Emulated parsing engine parsing parameters (AI-like text patterns)
             let lower = text.toLowerCase();
             let name = text;
-            let cal = 150, p = 4, c = 18, f = 3; 
+            let cal = 150, p = 4, c = 18, f = 3; // base default values
 
             if (lower.includes("chicken")) {
                 name = "Grilled Chicken Breast";
@@ -841,6 +822,7 @@
             const firstDayIndex = new Date(year, month, 1).getDay();
             const totalDays = new Date(year, month + 1, 0).getDate();
 
+            // Render offset paddings
             for (let i = 0; i < firstDayIndex; i++) {
                 const pad = document.createElement('div');
                 pad.className = 'calendar-cell';
@@ -848,6 +830,7 @@
                 grid.appendChild(pad);
             }
 
+            // Draw month dates
             for (let day = 1; day <= totalDays; day++) {
                 const dayDiv = document.createElement('div');
                 dayDiv.className = 'calendar-cell';
@@ -902,6 +885,7 @@
                 messageBody += `\n`;
             });
 
+            // Use built-in Rabbit OS message handler
             if (typeof PluginMessageHandler !== 'undefined') {
                 PluginMessageHandler.postMessage(JSON.stringify({
                     message: "Please email my food journal to my registered account. Here is the log data:\n\n" + messageBody,
