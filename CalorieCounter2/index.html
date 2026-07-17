@@ -486,7 +486,7 @@
             </div>
         </div>
 
-        <!-- EMAIL EXPORTER OVERLAY (Updated for Rabbit OS Integration) -->
+        <!-- EMAIL EXPORTER OVERLAY -->
         <div id="email-overlay" class="overlay hidden">
             <div class="overlay-header">
                 <span>Email Food Journal</span>
@@ -503,7 +503,6 @@
 
     <script>
         // Data Structure definition
-        // i: Records organized by ISO Date -> Meal -> Food Items array
         let trackerData = {}; 
         let currentDate = new Date();
         let selectedMealTab = 'breakfast';
@@ -523,7 +522,6 @@
 
         // Save & Load Engine
         function loadSavedData() {
-            // Priority 1: Check temporary session memory to keep states alive when jumping tabs
             const sessionData = sessionStorage.getItem(SESSION_KEY);
             const localData = localStorage.getItem(STORAGE_KEY);
             
@@ -538,7 +536,6 @@
 
         function saveData() {
             const dataString = JSON.stringify(trackerData);
-            // Sync to both LocalStorage & SessionStorage
             localStorage.setItem(STORAGE_KEY, dataString);
             sessionStorage.setItem(SESSION_KEY, dataString);
         }
@@ -704,99 +701,157 @@
             const scanMode = document.querySelector('input[name="scan-type"]:checked').value;
             showStatus(`Analyzing ${scanMode}...`, true);
 
-            // Forward image directly to Rabbit's AI processing unit or emulate local parser fallback
-            setTimeout(() => {
-                let emulatedName = "Scanned Food";
-                let emulatedCal = 250, emulatedP = 15, emulatedC = 20, emulatedF = 8;
-                
-                if (scanMode === 'upc') {
-                    emulatedName = "Protein Snack (UPC Scan)";
-                    emulatedCal = 190; emulatedP = 20; emulatedC = 15; emulatedF = 5;
-                } else if (scanMode === 'nutrition') {
-                    emulatedName = "Analyzed Meal Label";
-                    emulatedCal = 410; emulatedP = 25; emulatedC = 45; emulatedF = 12;
-                } else {
-                    emulatedName = "Fresh Food Photo Scan";
-                }
-
-                addFoodItem(selectedMealTab, emulatedName, emulatedCal, emulatedP, emulatedC, emulatedF, dataUrl);
-                showStatus("Analyzed and Added!", false);
-            }, 1800);
+            // Send actual captured image structure payload to the AI processor
+            sendImageToAI(dataUrl, scanMode);
         }
 
-        // Voice Handling & Speech API Integration
-        function setupVoicePTT() {
-            const micBtn = document.getElementById('mic-btn');
-            
-            // Web Speech API fallback
-            const SpeechRecognition = window.SpeechRecognition || window.webkitSpeechRecognition;
-            let recognition = null;
-            if (SpeechRecognition) {
-                recognition = new SpeechRecognition();
-                recognition.continuous = false;
-                recognition.interimResults = false;
-                recognition.lang = 'en-US';
-
-                recognition.onstart = () => {
-                    isRecording = true;
-                    micBtn.classList.add('recording');
-                    showStatus("Listening to food info...", true);
-                };
-
-                recognition.onend = () => {
-                    isRecording = false;
-                    micBtn.classList.remove('recording');
-                };
-
-                recognition.onresult = (event) => {
-                    const speechToText = event.results[0][0].transcript;
-                    showStatus(`Analyzing speech...`, true);
-                    processVoiceFood(speechToText);
-                };
-
-                recognition.onerror = () => {
-                    showStatus("Speech recognition error", false);
-                };
+        // Send Captured Image Base64 to AI System via Host PluginMessage Channel
+        function sendImageToAI(base64Image, scanType) {
+            let prompt = "";
+            if (scanType === 'upc') {
+                prompt = "Analyze this UPC barcode image. Determine the product name and standard macronutrient profiles. Respond ONLY with valid JSON in this exact format: {\"foods\":[{\"name\":\"food name\",\"calories\":000,\"protein\":00,\"carbs\":00,\"fat\":00}]}";
+            } else if (scanType === 'nutrition') {
+                prompt = "Read this nutritional facts label image. Extract the correct serving macronutrients. Respond ONLY with valid JSON in this exact format: {\"foods\":[{\"name\":\"food name\",\"calories\":000,\"protein\":00,\"carbs\":00,\"fat\":00}]}";
+            } else {
+                prompt = "Look closely at this food image. Estimate its specific food identity and average nutritional profile values. Respond ONLY with valid JSON in this exact format: {\"foods\":[{\"name\":\"food name\",\"calories\":000,\"protein\":00,\"carbs\":00,\"fat\":00}]}";
             }
 
-            // Bind click & simple hold mechanics suited for simulated PTT
+            if (typeof PluginMessageHandler !== "undefined") {
+                PluginMessageHandler.postMessage(JSON.stringify({
+                    message: prompt,
+                    image: base64Image, // Pass the dynamic captured image base64 directly
+                    useLLM: true
+                }));
+            } else {
+                // Standalone Mock Fallback only if native container isn't present
+                setTimeout(() => {
+                    handleParsedAIResponse({
+                        foods: [{ name: "Guessed Meal (Demo)", calories: 310, protein: 18, carbs: 35, fat: 11 }]
+                    }, base64Image);
+                }, 1500);
+            }
+        }
+
+        // Voice Handling & Speech API Integration with Native OS Hooks
+        function setupVoicePTT() {
+            const micBtn = document.getElementById('mic-btn');
+
             micBtn.addEventListener('click', () => {
-                if (recognition) {
-                    if (isRecording) {
-                        recognition.stop();
-                    } else {
-                        recognition.start();
-                    }
+                if (isRecording) {
+                    stopRecording();
                 } else {
-                    // Simulated response when voice API is absent
-                    showStatus("Synthesizing voice info...", true);
-                    setTimeout(() => {
-                        addFoodItem(selectedMealTab, "Voice Logged Apple", 95, 0, 25, 0);
-                        showStatus("Added Apple!", false);
-                    }, 1200);
+                    startRecording();
                 }
             });
         }
 
-        function processVoiceFood(text) {
-            // Emulated parsing engine parsing parameters (AI-like text patterns)
+        function startRecording() {
+            isRecording = true;
+            document.getElementById('mic-btn').classList.add('recording');
+            showStatus("Listening...", true);
+            
+            if (typeof CreationVoiceHandler !== "undefined") {
+                CreationVoiceHandler.postMessage("start");
+            }
+        }
+
+        function stopRecording() {
+            isRecording = false;
+            document.getElementById('mic-btn').classList.remove('recording');
+            showStatus("Processing...", true);
+
+            if (typeof CreationVoiceHandler !== "undefined") {
+                CreationVoiceHandler.postMessage("stop");
+            }
+        }
+
+        // Parse and ingest voice results sent from OS transcription handler
+        function analyzeSpeechText(transcript) {
+            if (!transcript || !transcript.trim()) {
+                showStatus("No voice input detected", false);
+                return;
+            }
+            showStatus("Analyzing: " + transcript, true);
+
+            const aiPrompt = `I ate: "${transcript}". Determine the macro breakdown. Respond ONLY with valid JSON in this exact format, no other text: {"foods":[{"name":"food name","calories":000,"protein":00,"carbs":00,"fat":00}]}. If multiple foods are mentioned, include each as a separate item. Use realistic nutritional values for typical serving sizes.`;
+            
+            if (typeof PluginMessageHandler !== "undefined") {
+                PluginMessageHandler.postMessage(JSON.stringify({
+                    message: aiPrompt,
+                    useLLM: true
+                }));
+            } else {
+                // Mock local parsing if offline
+                setTimeout(() => {
+                    processVoiceFoodFallback(transcript);
+                }, 1200);
+            }
+        }
+
+        function processVoiceFoodFallback(text) {
             let lower = text.toLowerCase();
             let name = text;
-            let cal = 150, p = 4, c = 18, f = 3; // base default values
+            let cal = 150, p = 4, c = 18, f = 3;
 
             if (lower.includes("chicken")) {
-                name = "Grilled Chicken Breast";
-                cal = 165; p = 31; c = 0; f = 3.6;
+                name = "Grilled Chicken"; cal = 165; p = 31; c = 0; f = 4;
             } else if (lower.includes("banana")) {
-                name = "Banana";
-                cal = 105; p = 1.3; c = 27; f = 0.3;
+                name = "Banana"; cal = 105; p = 1; c = 27; f = 0;
             } else if (lower.includes("egg")) {
-                name = "Boiled Egg";
-                cal = 78; p = 6; c = 0.6; f = 5;
+                name = "Boiled Egg"; cal = 78; p = 6; c = 1; f = 5;
             }
 
             addFoodItem(selectedMealTab, name, cal, p, c, f);
-            showStatus(`Logged: ${name}`);
+            showStatus(`Logged: ${name}`, false);
+        }
+
+        // Unified Message Handler from Device
+        window.onPluginMessage = function(payload) {
+            // Check if message is a voice-to-text transcript completion
+            if (payload.type === "sttEnded" && payload.transcript) {
+                analyzeSpeechText(payload.transcript);
+                return;
+            }
+
+            let responseData = null;
+            if (payload.data) {
+                responseData = typeof payload.data === "string" ? payload.data : JSON.stringify(payload.data);
+            } else if (payload.message) {
+                responseData = payload.message;
+            }
+
+            if (responseData) {
+                try {
+                    const jsonMatch = responseData.match(/\{[\s\S]*\}/);
+                    if (jsonMatch) {
+                        const parsed = JSON.parse(jsonMatch[0]);
+                        handleParsedAIResponse(parsed);
+                    } else {
+                        showStatus("No valid structured data in response", false);
+                    }
+                } catch (e) {
+                    showStatus("Error parsing AI response", false);
+                }
+            }
+        };
+
+        function handleParsedAIResponse(obj, attachedPhoto = null) {
+            if (obj && obj.foods && Array.isArray(obj.foods)) {
+                obj.foods.forEach(food => {
+                    addFoodItem(
+                        selectedMealTab,
+                        food.name || "Scanned Item",
+                        food.calories || 0,
+                        food.protein || 0,
+                        food.carbs || 0,
+                        food.fat || 0,
+                        attachedPhoto
+                    );
+                });
+                showStatus(`Added ${obj.foods.length} item(s)`, false);
+            } else {
+                showStatus("Parsing error from AI response", false);
+            }
         }
 
         // Calendar Implementation
@@ -862,7 +917,7 @@
             drawCalendar();
         }
 
-        // Email Exporter Implementation via Rabbit OS Native Hooks
+        // Email Exporter Implementation
         function toggleEmailScreen() {
             const overlay = document.getElementById('email-overlay');
             overlay.classList.toggle('hidden');
@@ -885,33 +940,30 @@
                 messageBody += `\n`;
             });
 
-            // Use built-in Rabbit OS message handler
-            if (typeof PluginMessageHandler !== 'undefined') {
+            if (typeof PluginMessageHandler !== "undefined") {
                 PluginMessageHandler.postMessage(JSON.stringify({
-                    message: "Please email my food journal to my registered account. Here is the log data:\n\n" + messageBody,
-                    useLLM: true
+                    action: "email",
+                    body: messageBody,
+                    subject: `My Macro Log - ${dateStr}`
                 }));
-                showStatus("Sent request to Rabbit OS!", true);
+                showStatus("Journal dispatched to email! ✉️");
+                toggleEmailScreen();
             } else {
-                console.log("Mock Email Request Sent to Rabbit OS:\n", messageBody);
-                showStatus("Sent request to Rabbit OS (Mock)!", true);
+                showStatus("Emailed (Simulated Fallback)", false);
+                toggleEmailScreen();
             }
-            
-            setTimeout(toggleEmailScreen, 1500);
         }
 
-        // Utility Status Bar Alerts
-        let statusTimeout;
+        // Helper Utility to update Status
         function showStatus(text, isActive = false) {
             const bar = document.getElementById('status-bar');
             bar.textContent = text;
-            if (isActive) {
-                bar.classList.add('active');
-            } else {
-                bar.classList.remove('active');
-                clearTimeout(statusTimeout);
-                statusTimeout = setTimeout(() => {
-                    bar.textContent = "Ready";
+            bar.className = isActive ? 'active' : '';
+            if (!isActive) {
+                setTimeout(() => {
+                    if (bar.textContent === text) {
+                        bar.textContent = "Ready";
+                    }
                 }, 3000);
             }
         }
