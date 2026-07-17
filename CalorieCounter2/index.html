@@ -3,7 +3,7 @@
 <head>
     <meta charset="UTF-8">
     <meta name="viewport" content="width=240, height=282, user-scalable=no, initial-scale=1.0">
-    <title>Rabbit Food Tracker</title>
+    <title>Rabbit Food Tracker2a</title>
     <style>
         /* CSS Reset & Variable Definitions */
         * {
@@ -389,7 +389,6 @@
 </head>
 <body>
     <div id="app">
-        <!-- Top bar -->
         <div id="header">
             <div id="date-display" onclick="toggleCalendar()">Today</div>
             <div id="header-actions">
@@ -400,7 +399,6 @@
             </div>
         </div>
 
-        <!-- Macro Totals -->
         <div id="totals">
             <div class="macro-item">
                 <span class="macro-value" id="total-cal">0</span>
@@ -420,22 +418,17 @@
             </div>
         </div>
 
-        <!-- Meal Segment Tabs -->
         <div id="meal-tabs">
             <div class="meal-tab active" onclick="switchMealTab('breakfast')" id="tab-breakfast">Breakfast</div>
             <div class="meal-tab" onclick="switchMealTab('lunch')" id="tab-lunch">Lunch</div>
             <div class="meal-tab" onclick="switchMealTab('supper')" id="tab-supper">Supper</div>
         </div>
 
-        <!-- Dynamic Food List -->
         <div id="food-list">
-            <!-- Items injected dynamically -->
-        </div>
+            </div>
 
-        <!-- Dynamic Status Bar -->
         <div id="status-bar">Ready</div>
 
-        <!-- LIVE VIEW CAMERA MODAL -->
         <div id="camera-modal" class="hidden">
             <video id="camera-stream" autoplay playsinline muted></video>
             <div id="camera-controls">
@@ -460,7 +453,6 @@
             </div>
         </div>
 
-        <!-- CALENDAR OVERLAY -->
         <div id="calendar-overlay" class="overlay hidden">
             <div class="overlay-header">
                 <span>Select / Set Date</span>
@@ -477,8 +469,7 @@
                     <div class="calendar-day-label">S</div>
                 </div>
                 <div class="calendar-grid" id="calendar-grid-cells">
-                    <!-- Calendar days loaded by JavaScript -->
-                </div>
+                    </div>
                 <div style="display:flex; justify-content:space-between; margin-top:8px;">
                     <button class="rect-btn" onclick="shiftMonth(-1)">◀ Prev</button>
                     <button class="rect-btn" onclick="shiftMonth(1)">Next ▶</button>
@@ -486,7 +477,6 @@
             </div>
         </div>
 
-        <!-- EMAIL EXPORTER OVERLAY -->
         <div id="email-overlay" class="overlay hidden">
             <div class="overlay-header">
                 <span>Email Food Journal</span>
@@ -508,41 +498,54 @@
         let selectedMealTab = 'breakfast';
         let isRecording = false;
         let videoStream = null;
+        
+        // FIX: Track photo in memory while waiting for AI response
+        let pendingPhoto = null; 
 
         // Constants for Local/Session Synchronicity
-        const STORAGE_KEY = "rabbit_macro_data";
-        const SESSION_KEY = "rabbit_macro_session_data";
+        const STORAGE_KEY = "rabbit_macro_data_v2";
 
         // Initialize App
-        document.addEventListener("DOMContentLoaded", () => {
-            loadSavedData();
+        document.addEventListener("DOMContentLoaded", async () => {
+            await loadSavedData();
             updateUI();
             setupVoicePTT();
         });
 
-        // Save & Load Engine
-        function loadSavedData() {
-            const sessionData = sessionStorage.getItem(SESSION_KEY);
-            const localData = localStorage.getItem(STORAGE_KEY);
-            
-            if (sessionData) {
-                trackerData = JSON.parse(sessionData);
-            } else if (localData) {
-                trackerData = JSON.parse(localData);
-            } else {
-                trackerData = {};
+        // Save & Load Engine (Updated to use Calorie1's reliable R1 creationStorage)
+        async function loadSavedData() {
+            try {
+                if (window.creationStorage) {
+                    const localData = await window.creationStorage.plain.getItem(STORAGE_KEY);
+                    if (localData) {
+                        trackerData = JSON.parse(atob(localData));
+                    }
+                } else {
+                    const localData = localStorage.getItem(STORAGE_KEY);
+                    if (localData) trackerData = JSON.parse(localData);
+                }
+            } catch (e) {
+                console.error("Failed to load data", e);
             }
+            if (!trackerData) trackerData = {};
         }
 
-        function saveData() {
+        async function saveData() {
             const dataString = JSON.stringify(trackerData);
-            localStorage.setItem(STORAGE_KEY, dataString);
-            sessionStorage.setItem(SESSION_KEY, dataString);
+            try {
+                if (window.creationStorage) {
+                    await window.creationStorage.plain.setItem(STORAGE_KEY, btoa(dataString));
+                } else {
+                    localStorage.setItem(STORAGE_KEY, dataString);
+                }
+            } catch (e) {
+                console.error("Failed to save data", e);
+            }
         }
 
         function forceSaveData() {
             saveData();
-            showStatus("Saved locally & session synced! ✓");
+            showStatus("Saved securely to OS! ✓");
         }
 
         // Date Manipulation
@@ -701,6 +704,9 @@
             const scanMode = document.querySelector('input[name="scan-type"]:checked').value;
             showStatus(`Analyzing ${scanMode}...`, true);
 
+            // FIX: Store the photo in memory so it doesn't get lost while AI thinks
+            pendingPhoto = dataUrl;
+            
             // Send actual captured image structure payload to the AI processor
             sendImageToAI(dataUrl, scanMode);
         }
@@ -719,15 +725,16 @@
             if (typeof PluginMessageHandler !== "undefined") {
                 PluginMessageHandler.postMessage(JSON.stringify({
                     message: prompt,
-                    image: base64Image, // Pass the dynamic captured image base64 directly
+                    image: base64Image, 
                     useLLM: true
                 }));
             } else {
-                // Standalone Mock Fallback only if native container isn't present
+                // Standalone Mock Fallback
                 setTimeout(() => {
                     handleParsedAIResponse({
                         foods: [{ name: "Guessed Meal (Demo)", calories: 310, protein: 18, carbs: 35, fat: 11 }]
-                    }, base64Image);
+                    }, pendingPhoto);
+                    pendingPhoto = null; // Clear after mock
                 }, 1500);
             }
         }
@@ -805,9 +812,8 @@
             showStatus(`Logged: ${name}`, false);
         }
 
-        // Unified Message Handler from Device
+        // Unified Message Handler from Device (Updated heavily with Calorie1 logic)
         window.onPluginMessage = function(payload) {
-            // Check if message is a voice-to-text transcript completion
             if (payload.type === "sttEnded" && payload.transcript) {
                 analyzeSpeechText(payload.transcript);
                 return;
@@ -825,12 +831,16 @@
                     const jsonMatch = responseData.match(/\{[\s\S]*\}/);
                     if (jsonMatch) {
                         const parsed = JSON.parse(jsonMatch[0]);
-                        handleParsedAIResponse(parsed);
+                        // FIX: Pass the pendingPhoto so it maps perfectly
+                        handleParsedAIResponse(parsed, pendingPhoto);
                     } else {
                         showStatus("No valid structured data in response", false);
                     }
                 } catch (e) {
                     showStatus("Error parsing AI response", false);
+                } finally {
+                    // Always clear the pending photo after parsing attempts
+                    pendingPhoto = null;
                 }
             }
         };
