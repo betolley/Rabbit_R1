@@ -3,7 +3,7 @@
 <head>
     <meta charset="UTF-8">
     <meta name="viewport" content="width=240, height=282, user-scalable=no, initial-scale=1.0">
-    <title>Rabbit Food Tracker 2b</title>
+    <title>Rabbit Food Tracker</title>
     <style>
         /* CSS Reset & Variable Definitions */
         * {
@@ -389,6 +389,7 @@
 </head>
 <body>
     <div id="app">
+        <!-- Top bar -->
         <div id="header">
             <div id="date-display" onclick="toggleCalendar()">Today</div>
             <div id="header-actions">
@@ -399,6 +400,7 @@
             </div>
         </div>
 
+        <!-- Macro Totals -->
         <div id="totals">
             <div class="macro-item">
                 <span class="macro-value" id="total-cal">0</span>
@@ -418,17 +420,22 @@
             </div>
         </div>
 
+        <!-- Meal Segment Tabs -->
         <div id="meal-tabs">
             <div class="meal-tab active" onclick="switchMealTab('breakfast')" id="tab-breakfast">Breakfast</div>
             <div class="meal-tab" onclick="switchMealTab('lunch')" id="tab-lunch">Lunch</div>
             <div class="meal-tab" onclick="switchMealTab('supper')" id="tab-supper">Supper</div>
         </div>
 
+        <!-- Dynamic Food List -->
         <div id="food-list">
-            </div>
+            <!-- Items injected dynamically -->
+        </div>
 
+        <!-- Dynamic Status Bar -->
         <div id="status-bar">Ready</div>
 
+        <!-- LIVE VIEW CAMERA MODAL -->
         <div id="camera-modal" class="hidden">
             <video id="camera-stream" autoplay playsinline muted></video>
             <div id="camera-controls">
@@ -453,6 +460,7 @@
             </div>
         </div>
 
+        <!-- CALENDAR OVERLAY -->
         <div id="calendar-overlay" class="overlay hidden">
             <div class="overlay-header">
                 <span>Select / Set Date</span>
@@ -469,7 +477,8 @@
                     <div class="calendar-day-label">S</div>
                 </div>
                 <div class="calendar-grid" id="calendar-grid-cells">
-                    </div>
+                    <!-- Calendar days loaded by JavaScript -->
+                </div>
                 <div style="display:flex; justify-content:space-between; margin-top:8px;">
                     <button class="rect-btn" onclick="shiftMonth(-1)">◀ Prev</button>
                     <button class="rect-btn" onclick="shiftMonth(1)">Next ▶</button>
@@ -477,6 +486,7 @@
             </div>
         </div>
 
+        <!-- EMAIL EXPORTER OVERLAY -->
         <div id="email-overlay" class="overlay hidden">
             <div class="overlay-header">
                 <span>Email Food Journal</span>
@@ -490,6 +500,7 @@
             </div>
         </div>
 
+        <!-- ERROR / TIMEOUT OVERLAY -->
         <div id="debug-overlay" class="overlay hidden" style="z-index: 500;">
             <div class="overlay-header" style="color: #FF3B30;">
                 <span>AI Error / Timeout</span>
@@ -515,7 +526,7 @@
         let aiTimeout = null;
 
         // Constants for Local/Session Synchronicity
-        const STORAGE_KEY = "rabbit_macro_data_v4";
+        const STORAGE_KEY = "rabbit_macro_data_v5";
 
         // Initialize App
         document.addEventListener("DOMContentLoaded", async () => {
@@ -540,7 +551,7 @@
                 showErrorPopup("Request Timed Out.\n\nThe AI took longer than 15 seconds to reply or the connection dropped.");
                 pendingPhoto = null;
                 showStatus("Ready");
-            }, 30000);
+            }, 15000);
         }
 
         // Hardware Button Mappings (R1 Native Events)
@@ -861,30 +872,48 @@
 
         // Unified Message Handler from Device
         window.onPluginMessage = function(payload) {
-            // Ignore OS-level background events from triggering the error popup
-            if (payload.type === "sttStarted" || payload.type === "sttEnded") {
-                if (payload.transcript) {
-                    analyzeSpeechText(payload.transcript);
+            // 1. Ensure payload is parsed as an object to catch Rabbit OS events accurately
+            let payloadObj = payload;
+            if (typeof payload === 'string') {
+                try { 
+                    payloadObj = JSON.parse(payload); 
+                } catch(e) {}
+            }
+
+            // 2. Ignore OS-level background events from triggering the error popup
+            if (payloadObj && (payloadObj.type === "sttStarted" || payloadObj.type === "sttEnded" || payloadObj.type === "sttStart")) {
+                if (payloadObj.transcript) {
+                    analyzeSpeechText(payloadObj.transcript);
                 }
-                return;
+                return; // Exit silently
             }
 
+            // 3. Extract string representation of the data payload
             let responseData = null;
-            if (payload.data) {
-                responseData = typeof payload.data === "string" ? payload.data : JSON.stringify(payload.data);
-            } else if (payload.message) {
-                responseData = payload.message;
+            if (payloadObj && payloadObj.data) {
+                responseData = typeof payloadObj.data === "string" ? payloadObj.data : JSON.stringify(payloadObj.data);
+            } else if (payloadObj && payloadObj.message) {
+                responseData = typeof payloadObj.message === "string" ? payloadObj.message : JSON.stringify(payloadObj.message);
             } else {
-                responseData = JSON.stringify(payload);
+                responseData = typeof payload === "string" ? payload : JSON.stringify(payload);
             }
 
-            // Only act if we have substantive data returned
+            // 4. Ultimate fallback to prevent any raw 'stt' text from slipping through
+            if (responseData && (responseData.includes('"sttStarted"') || responseData.includes('"sttEnded"'))) {
+                return; 
+            }
+
+            // 5. Act on valid, substantive data
             if (responseData) {
                 clearTimeout(aiTimeout); // Clear the error clock because AI responded
                 try {
                     const jsonMatch = responseData.match(/\{[\s\S]*\}/);
                     if (jsonMatch) {
                         const parsed = JSON.parse(jsonMatch[0]);
+                        
+                        // Failsafe in case a STT event made it past the initial filters
+                        if (parsed.type && parsed.type.includes("stt")) return;
+
                         if (parsed && parsed.foods && Array.isArray(parsed.foods)) {
                             handleParsedAIResponse(parsed, pendingPhoto);
                         } else {
