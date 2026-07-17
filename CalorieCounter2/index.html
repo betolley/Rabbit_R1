@@ -492,7 +492,7 @@
 
         <div id="debug-overlay" class="overlay hidden" style="z-index: 500;">
             <div class="overlay-header" style="color: #FF3B30;">
-                <span>AI Raw Response</span>
+                <span>AI Error / Timeout</span>
                 <button class="circle-btn" onclick="document.getElementById('debug-overlay').classList.add('hidden')">✕</button>
             </div>
             <div class="overlay-content" style="background: #1c1c1e; padding: 8px; border-radius: 4px; font-family: monospace; font-size: 8px; white-space: pre-wrap; word-wrap: break-word;">
@@ -510,17 +510,38 @@
         let isRecording = false;
         let videoStream = null;
         let pendingPhoto = null; 
+        
+        // Timeout tracking
+        let aiTimeout = null;
 
         // Constants for Local/Session Synchronicity
-        const STORAGE_KEY = "rabbit_macro_data_v3";
+        const STORAGE_KEY = "rabbit_macro_data_v4";
 
         // Initialize App
         document.addEventListener("DOMContentLoaded", async () => {
             await loadSavedData();
             updateUI();
             setupVoicePTT();
-            setupHardwareButtons(); // Hook in the R1 side button
+            setupHardwareButtons(); 
         });
+
+        // Error Popup Helper
+        function showErrorPopup(text) {
+            const debugOverlay = document.getElementById('debug-overlay');
+            const debugText = document.getElementById('debug-text');
+            debugText.textContent = text;
+            debugOverlay.classList.remove('hidden');
+            showStatus("Error", false);
+        }
+
+        function startAITimer() {
+            clearTimeout(aiTimeout);
+            aiTimeout = setTimeout(() => {
+                showErrorPopup("Request Timed Out.\n\nThe AI took longer than 15 seconds to reply or the connection dropped.");
+                pendingPhoto = null;
+                showStatus("Ready");
+            }, 15000);
+        }
 
         // Hardware Button Mappings (R1 Native Events)
         function setupHardwareButtons() {
@@ -537,7 +558,6 @@
                     stopRecording();
                 } else {
                     startRecording();
-                    // Fallback cutoff for single clicks so it doesn't get stuck recording
                     setTimeout(() => { if (isRecording) stopRecording(); }, 5000); 
                 }
             });
@@ -736,6 +756,7 @@
             showStatus(`Analyzing ${scanMode}...`, true);
 
             pendingPhoto = dataUrl;
+            startAITimer(); // Start the timeout clock
             sendImageToAI(dataUrl, scanMode);
         }
 
@@ -759,6 +780,7 @@
             } else {
                 // Standalone Mock Fallback
                 setTimeout(() => {
+                    clearTimeout(aiTimeout);
                     handleParsedAIResponse({
                         foods: [{ name: "Guessed Meal (Demo)", calories: 310, protein: 18, carbs: 35, fat: 11 }]
                     }, pendingPhoto);
@@ -805,6 +827,7 @@
                 return;
             }
             showStatus("Analyzing: " + transcript, true);
+            startAITimer(); // Start the timeout clock
 
             const aiPrompt = `I ate: "${transcript}". Determine the macro breakdown. Respond ONLY with valid JSON in this exact format, no other text: {"foods":[{"name":"food name","calories":000,"protein":00,"carbs":00,"fat":00}]}. If multiple foods are mentioned, include each as a separate item. Use realistic nutritional values for typical serving sizes.`;
             
@@ -814,7 +837,10 @@
                     useLLM: true
                 }));
             } else {
-                setTimeout(() => processVoiceFoodFallback(transcript), 1200);
+                setTimeout(() => {
+                    clearTimeout(aiTimeout);
+                    processVoiceFoodFallback(transcript);
+                }, 1200);
             }
         }
 
@@ -835,8 +861,11 @@
 
         // Unified Message Handler from Device
         window.onPluginMessage = function(payload) {
-            if (payload.type === "sttEnded" && payload.transcript) {
-                analyzeSpeechText(payload.transcript);
+            // Ignore OS-level background events from triggering the error popup
+            if (payload.type === "sttStarted" || payload.type === "sttEnded") {
+                if (payload.transcript) {
+                    analyzeSpeechText(payload.transcript);
+                }
                 return;
             }
 
@@ -846,27 +875,29 @@
             } else if (payload.message) {
                 responseData = payload.message;
             } else {
-                // Failsafe serialization if payload format is unexpected
                 responseData = JSON.stringify(payload);
             }
 
-            // TRIGGER DEBUG MODAL REGARDLESS OF SUCCESS/FAIL
-            const debugOverlay = document.getElementById('debug-overlay');
-            const debugText = document.getElementById('debug-text');
-            debugText.textContent = responseData || "Empty response payload from AI.";
-            debugOverlay.classList.remove('hidden');
-
+            // Only act if we have substantive data returned
             if (responseData) {
+                clearTimeout(aiTimeout); // Clear the error clock because AI responded
                 try {
                     const jsonMatch = responseData.match(/\{[\s\S]*\}/);
                     if (jsonMatch) {
                         const parsed = JSON.parse(jsonMatch[0]);
-                        handleParsedAIResponse(parsed, pendingPhoto);
+                        if (parsed && parsed.foods && Array.isArray(parsed.foods)) {
+                            handleParsedAIResponse(parsed, pendingPhoto);
+                        } else {
+                            // Valid JSON, but wrong format
+                            showErrorPopup("AI Response missing 'foods' array:\n\n" + responseData);
+                        }
                     } else {
-                        showStatus("No valid structured data in response", false);
+                        // AI rambled or format completely broke
+                        showErrorPopup("No valid JSON found in AI response:\n\n" + responseData);
                     }
                 } catch (e) {
-                    showStatus("Error parsing AI response", false);
+                    // Total parsing failure
+                    showErrorPopup("Error parsing AI response:\n\n" + responseData);
                 } finally {
                     pendingPhoto = null;
                 }
@@ -874,22 +905,18 @@
         };
 
         function handleParsedAIResponse(obj, attachedPhoto = null) {
-            if (obj && obj.foods && Array.isArray(obj.foods)) {
-                obj.foods.forEach(food => {
-                    addFoodItem(
-                        selectedMealTab,
-                        food.name || "Scanned Item",
-                        food.calories || 0,
-                        food.protein || 0,
-                        food.carbs || 0,
-                        food.fat || 0,
-                        attachedPhoto
-                    );
-                });
-                showStatus(`Added ${obj.foods.length} item(s)`, false);
-            } else {
-                showStatus("Parsing error from AI response", false);
-            }
+            obj.foods.forEach(food => {
+                addFoodItem(
+                    selectedMealTab,
+                    food.name || "Scanned Item",
+                    food.calories || 0,
+                    food.protein || 0,
+                    food.carbs || 0,
+                    food.fat || 0,
+                    attachedPhoto
+                );
+            });
+            showStatus(`Added ${obj.foods.length} item(s)`, false);
         }
 
         // Calendar Implementation
