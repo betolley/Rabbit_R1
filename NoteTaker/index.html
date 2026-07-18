@@ -338,7 +338,6 @@ html, body {
 </head>
 <body>
     <div id="app">
-        <!-- List View -->
         <div id="view-list" class="view active">
             <div class="header">
                 <span class="header-title">Notes</span>
@@ -348,30 +347,19 @@ html, body {
             <div id="notes-list" class="scroll-area"></div>
         </div>
 
-        <!-- Search View -->
         <div id="view-search" class="view">
             <div class="header">
                 <button id="btn-search-back" class="header-btn">&larr;</button>
                 <span class="header-title">Search</span>
             </div>
             <div class="search-form">
-                <input
-type="text"
-id="search-input"
-placeholder="Subject keyword..."
-class="input-field"
->
-                <input
-type="date"
-id="search-date"
-class="input-field"
->
+                <input type="text" id="search-input" placeholder="Subject keyword..." class="input-field">
+                <input type="date" id="search-date" class="input-field">
                 <button id="btn-do-search" class="action-btn">Search</button>
             </div>
             <div id="search-results" class="scroll-area"></div>
         </div>
 
-        <!-- Note Editor View -->
         <div id="view-editor" class="view">
             <div class="header">
                 <button id="btn-editor-back" class="header-btn">&larr;</button>
@@ -379,12 +367,7 @@ class="input-field"
                 <button id="btn-delete" class="header-btn del-btn">&#128465;</button>
             </div>
             <div class="editor-content scroll-area">
-                <input
-type="text"
-id="note-subject"
-placeholder="Subject..."
-class="input-field"
->
+                <input type="text" id="note-subject" placeholder="Subject..." class="input-field">
                 <div class="reminder-row">
                     <select id="reminder-type" class="select-field">
                         <option value="none">No Reminder</option>
@@ -393,35 +376,17 @@ class="input-field"
                     </select>
                 </div>
                 <div id="reminder-fields" class="reminder-fields hidden">
-                    <input
-type="date"
-id="reminder-date"
-class="input-field"
->
-                    <input
-type="time"
-id="reminder-time"
-class="input-field hidden"
->
+                    <input type="date" id="reminder-date" class="input-field">
+                    <input type="time" id="reminder-time" class="input-field hidden">
                 </div>
-                <textarea
-id="note-body"
-placeholder="Write your note..."
-class="textarea-field"
-></textarea>
+                <textarea id="note-body" placeholder="Write your note..." class="textarea-field"></textarea>
                 <div class="photos-section">
                     <div class="photos-header">
                         <span class="photos-label">Photos</span>
                         <button id="btn-photo" class="action-btn small photo-btn">&#128247; Add</button>
                     </div>
                     <div id="photos-grid" class="photos-grid"></div>
-                    <input
-type="file"
-id="photo-input"
-accept="image/*"
-multiple
-class="hidden"
->
+                    <input type="file" id="photo-input" accept="image/*" multiple class="hidden">
                 </div>
                 <div class="editor-actions">
                     <button id="btn-voice" class="action-btn small">&#127908; Voice</button>
@@ -869,27 +834,45 @@ var currentNoteId = null;
 var isRecording = false;
 var pendingAIRequest = false;
 
+// ⚠️ REQUIRED: Replace with your actual hosted backend API URL
+const BACKEND_URL = 'https://your-api-proxy.com/api'; 
+
 var MAX_PHOTO_WIDTH = 800;
 var MAX_PHOTO_QUALITY = 0.7;
 
 // ============================================
-// Storage (FIXED - matching Food Tracker pattern)
+// Storage (UPDATED - Using Fetch API for Persistence)
 // ============================================
 async function saveNotes() {
   try {
+    // Send data to your external backend to bypass the R1's ephemeral storage limits
+    await fetch(`${BACKEND_URL}/save`, {
+      method: 'POST',
+      headers: { 'Content-Type': 'application/json' },
+      body: JSON.stringify({ notes: notes })
+    });
+    console.log('Notes saved to backend successfully.');
+  } catch (e) {
+    console.error('Save error:', e);
+    // Fallback to local storage only for session-level safety
     if (window.creationStorage) {
       var encoded = btoa(JSON.stringify(notes));
-      await window.creationStorage.plain.setItem('r1_notes', encoded);
+      window.creationStorage.plain.setItem('r1_notes', encoded);
     } else {
       localStorage.setItem('r1_notes', JSON.stringify(notes));
     }
-  } catch (e) {
-    console.error('Save error:', e);
   }
 }
 
 async function loadNotes() {
   try {
+    const response = await fetch(`${BACKEND_URL}/load`);
+    if (response.ok) {
+      const data = await response.json();
+      notes = data.notes || [];
+    }
+  } catch (e) {
+    console.error('Load error from backend, trying local fallback:', e);
     if (window.creationStorage) {
       var stored = await window.creationStorage.plain.getItem('r1_notes');
       if (stored) {
@@ -899,9 +882,6 @@ async function loadNotes() {
       var stored = localStorage.getItem('r1_notes');
       if (stored) notes = JSON.parse(stored);
     }
-  } catch (e) {
-    console.error('Load error:', e);
-    notes = [];
   }
 }
 
@@ -996,32 +976,32 @@ function generateICS(note) {
 }
 
 // ============================================
-// Email (FIXED - using PluginMessageHandler for R1)
+// Email (UPDATED - Routing through Backend Proxy)
 // ============================================
-function sendEmail(note) {
+async function sendEmail(note) {
   var subject = note.subject || 'Note from R1';
   var body = note.body || '';
 
   if (note.reminderType !== 'none' && note.reminderDate) {
     body += '\n\n--- Reminder ---\n';
-    if (note.reminderType === 'allday') {
-      body += 'All Day: ' + note.reminderDate;
-    } else {
-      body += 'Date/Time: ' + note.reminderDate + ' ' + (note.reminderTime || '');
-    }
+    body += note.reminderType === 'allday' 
+      ? 'All Day: ' + note.reminderDate 
+      : 'Date/Time: ' + note.reminderDate + ' ' + (note.reminderTime || '');
     body += '\n\nNote: A calendar .ics file would be attached. Save it to add this event to your calendar.';
     body += '\n\n--- ICS Content (copy to .ics file) ---\n';
     body += generateICS(note);
   }
 
-  // Use PluginMessageHandler on R1 device (don't include photo data URLs - too large)
-  if (typeof PluginMessageHandler !== 'undefined') {
-    PluginMessageHandler.postMessage(JSON.stringify({
-      type: 'email',
-      subject: subject,
-      body: body
-    }));
-  } else {
+  try {
+    // Rely on your backend to construct and send the email (e.g., via SendGrid or Nodemailer)
+    await fetch(`${BACKEND_URL}/email`, {
+      method: 'POST',
+      headers: { 'Content-Type': 'application/json' },
+      body: JSON.stringify({ subject: subject, body: body })
+    });
+    alert('Email dispatched via server!');
+  } catch (e) {
+    console.error('Failed to send email:', e);
     // Fallback for browser testing - use mailto (without photos)
     var encodedSubject = encodeURIComponent(subject);
     var encodedBody = encodeURIComponent(body);
@@ -1341,7 +1321,7 @@ function handleAIResponse(response) {
 }
 
 // ============================================
-// Plugin Message Handler
+// Plugin Message Handler (UPDATED - Listening for Camera)
 // ============================================
 window.onPluginMessage = function(data) {
   // Handle STT transcript
@@ -1358,6 +1338,19 @@ window.onPluginMessage = function(data) {
       btn.classList.remove('recording');
       btn.textContent = '\uD83C\uDFA4 Voice';
     }
+    return;
+  }
+
+  // Handle R1 Hardware Camera Response
+  if (data.type === 'photoCaptured' && data.imageData) {
+    var note = notes.find(function(n) { return n.id === currentNoteId; });
+    if (!note) return;
+    if (!note.photos) note.photos = [];
+    
+    // Attach the base64 image returned directly from the OS
+    note.photos.push('data:image/jpeg;base64,' + data.imageData);
+    renderPhotos(note.photos);
+    saveNotes();
     return;
   }
 
@@ -1441,10 +1434,20 @@ document.addEventListener('DOMContentLoaded', async function() {
     renderNotesList();
   });
 
-  // Photo button
+  // Photo button - Bridge request to R1 OS
   document.getElementById('btn-photo').addEventListener('click', function() {
-    document.getElementById('photo-input').click();
+    if (typeof PluginMessageHandler !== 'undefined') {
+      // Trigger native OS camera instead of web file input
+      PluginMessageHandler.postMessage(JSON.stringify({
+        action: 'openCamera'
+      }));
+    } else {
+      // Fallback for browser testing
+      document.getElementById('photo-input').click();
+    }
   });
+  
+  // Keep fallback file input change listener for browser testing
   document.getElementById('photo-input').addEventListener('change', handlePhotoInput);
 
   // Editor actions
