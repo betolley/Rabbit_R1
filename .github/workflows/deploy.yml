@@ -79,6 +79,11 @@ jobs:
         run: |
           mkdir -p ./final_site/R1Platformer
           cp -r R1Platformer/* ./final_site/R1Platformer/  
+      # --- Note Taker2 ---
+      - name: Build and Copy R1 Platformer
+        run: |
+          mkdir -p ./final_site/NoteTaker
+          cp -r NoteTaker/* ./final_site/NoteTaker/
 
       # --- CREATE A ROOT HOME PAGE ---
       - name: Create Landing Page Index
