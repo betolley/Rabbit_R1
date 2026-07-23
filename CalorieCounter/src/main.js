@@ -1,500 +1,734 @@
-// Macro Tracker - R1 Food Logging Plugin
+<!DOCTYPE html>
+<html lang="en">
+<head>
+    <meta charset="UTF-8">
+    <meta name="viewport" content="width=240, height=320, user-scalable=no, initial-scale=1.0">
+    <title>R1 Notes</title>
+    <style>
+* { margin: 0; padding: 0; box-sizing: border-box; }
 
-const STORAGE_KEY = 'macro_tracker_data';
+html, body {
+    width: 100vw; height: 100vh;
+    background-color: #000; color: #fff;
+    font-family: -apple-system, BlinkMacSystemFont, "Segoe UI", Roboto, sans-serif;
+    font-size: 3.5vw; overflow: hidden;
+    -webkit-user-select: none; user-select: none;
+}
 
-let currentDate = new Date();
-let foodLog = {};
-let isRecording = false;
-let touchStartX = 0;
-let pendingPhotoIndex = null;
+#app { width: 100vw; height: 100vh; position: relative; }
 
-const PHOTO_STORAGE_KEY = 'macro_tracker_photos';
-let photoStore = {};
+.view {
+    display: none; width: 100%; height: 100%;
+    flex-direction: column; position: absolute;
+    top: 0; left: 0;
+}
 
-// ===== Storage =====
+.view.active { display: flex; }
 
-function saveData() {
+.header {
+    display: flex; align-items: center; padding: 2vw 3vw;
+    background: #111; border-bottom: 1px solid #333;
+    min-height: 44px; flex-shrink: 0;
+}
+
+.header-title { flex: 1; font-size: 4.5vw; font-weight: bold; color: #FE5F00; }
+
+.header-btn {
+    min-width: 36px; min-height: 36px; padding: 1.5vw 2.5vw;
+    font-size: 4vw; background: #222; color: #fff;
+    border: 1px solid #444; border-radius: 1.5vw; margin-left: 1.5vw;
+}
+
+.header-btn:active { background: #FE5F00; color: #000; }
+
+.del-btn { background: #331111; border-color: #662222; transition: all 0.2s; }
+
+.scroll-area {
+    flex: 1; overflow-y: auto; overflow-x: hidden;
+    padding: 2vw; -webkit-overflow-scrolling: touch;
+}
+
+.note-item {
+    background: #1a1a1a; border: 1px solid #333;
+    border-radius: 2vw; padding: 2.5vw 3vw; margin-bottom: 2vw;
+    min-height: 44px; display: flex; flex-direction: column;
+    justify-content: center;
+}
+
+.note-item:active { background: #2a2a2a; border-color: #FE5F00; }
+
+.note-item-subject {
+    font-size: 3.8vw; font-weight: bold; color: #fff;
+    margin-bottom: 1vw; white-space: nowrap;
+    overflow: hidden; text-overflow: ellipsis;
+}
+
+.note-item-meta { font-size: 2.8vw; color: #888; }
+.note-item-reminder { font-size: 2.8vw; color: #FE5F00; margin-top: 0.5vw; }
+
+.input-field, .select-field {
+    width: 100%; padding: 2.5vw 3vw; font-size: 3.5vw;
+    background: #1a1a1a; color: #fff; border: 1px solid #444;
+    border-radius: 1.5vw; margin-bottom: 2vw; min-height: 36px;
+}
+
+.select-field { padding: 2vw 3vw; }
+
+.input-field:focus, .select-field:focus, .textarea-field:focus {
+    border-color: #FE5F00; outline: none;
+}
+
+.textarea-field {
+    width: 100%; min-height: 80px; padding: 2.5vw 3vw;
+    font-size: 3.5vw; background: #1a1a1a; color: #fff;
+    border: 1px solid #444; border-radius: 1.5vw; resize: vertical;
+    margin-bottom: 2vw; line-height: 1.4;
+    -webkit-user-select: text; user-select: text;
+}
+
+.reminder-row, .reminder-fields { margin-bottom: 1vw; }
+.hidden { display: none !important; }
+.editor-content { padding: 3vw; }
+
+.editor-actions {
+    display: flex; flex-wrap: wrap; gap: 1.5vw; margin-top: 2vw;
+}
+
+.action-btn {
+    min-width: 44px; min-height: 44px; padding: 2.5vw 4vw;
+    font-size: 3.5vw; background: #FE5F00; color: #000;
+    border: none; border-radius: 1.5vw; font-weight: bold;
+}
+
+.action-btn:active { opacity: 0.7; }
+.action-btn.small {
+    padding: 2vw 2.5vw; font-size: 3vw;
+    min-width: 38px; min-height: 38px;
+}
+
+.save-btn { background: #00cc66; color: #000; }
+.search-form { padding: 3vw; flex-shrink: 0; }
+.empty-state { text-align: center; color: #666; padding: 10vw 5vw; font-size: 3.5vw; }
+
+.recording {
+    background: #cc0000 !important; color: #fff !important;
+    animation: pulse 1s infinite;
+}
+
+@keyframes pulse { 0%, 100% { opacity: 1; } 50% { opacity: 0.5; } }
+
+.photos-section { margin-bottom: 2vw; }
+.photos-header { display: flex; align-items: center; justify-content: space-between; margin-bottom: 1.5vw; }
+.photos-label { font-size: 3.2vw; color: #aaa; font-weight: bold; }
+.photo-btn { background: #2a4a6a; color: #fff; }
+.photos-grid { display: flex; flex-wrap: wrap; gap: 1.5vw; }
+
+.photo-thumb {
+    position: relative; width: 18vw; height: 18vw;
+    border-radius: 1.5vw; overflow: hidden; border: 1px solid #444;
+}
+
+.photo-thumb img { width: 100%; height: 100%; object-fit: cover; }
+.photo-remove {
+    position: absolute; top: 0; right: 0; width: 5vw; height: 5vw;
+    background: rgba(200, 0, 0, 0.85); color: #fff; border: none;
+    border-radius: 0 1.5vw 0 1.5vw; font-size: 3vw; line-height: 5vw; text-align: center; padding: 0;
+}
+
+.photo-thumb:active { border-color: #FE5F00; }
+.note-item-photos { font-size: 2.8vw; color: #6a9fd8; margin-top: 0.5vw; }
+    </style>
+</head>
+<body>
+    <div id="app">
+        <div id="view-list" class="view active">
+            <div class="header">
+                <span class="header-title">Notes</span>
+                <button id="btn-search" class="header-btn">&#128269;</button>
+                <button id="btn-new" class="header-btn">&#xFF0B;</button>
+            </div>
+            <div id="notes-list" class="scroll-area"></div>
+        </div>
+
+        <div id="view-search" class="view">
+            <div class="header">
+                <button id="btn-search-back" class="header-btn">&larr;</button>
+                <span class="header-title">Search</span>
+            </div>
+            <div class="search-form">
+                <input type="text" id="search-input" placeholder="Subject keyword..." class="input-field">
+                <input type="date" id="search-date" class="input-field">
+                <button id="btn-do-search" class="action-btn">Search</button>
+            </div>
+            <div id="search-results" class="scroll-area"></div>
+        </div>
+
+        <div id="view-editor" class="view">
+            <div class="header">
+                <button id="btn-editor-back" class="header-btn">&larr;</button>
+                <span class="header-title">Edit</span>
+                <button id="btn-delete" class="header-btn del-btn">&#128465;</button>
+            </div>
+            <div class="editor-content scroll-area">
+                <input type="text" id="note-subject" placeholder="Subject..." class="input-field">
+                <div class="reminder-row">
+                    <select id="reminder-type" class="select-field">
+                        <option value="none">No Reminder</option>
+                        <option value="allday">All Day</option>
+                        <option value="datetime">Date &amp; Time</option>
+                    </select>
+                </div>
+                <div id="reminder-fields" class="reminder-fields hidden">
+                    <input type="date" id="reminder-date" class="input-field">
+                    <input type="time" id="reminder-time" class="input-field hidden">
+                </div>
+                <textarea id="note-body" placeholder="Write your note..." class="textarea-field"></textarea>
+                <div class="photos-section">
+                    <div class="photos-header">
+                        <span class="photos-label">Photos</span>
+                        <button id="btn-photo" class="action-btn small photo-btn">&#128247; Add</button>
+                    </div>
+                    <div id="photos-grid" class="photos-grid"></div>
+                    <input type="file" id="photo-input" accept="image/*" capture="environment" class="hidden" multiple>
+                </div>
+                <div class="editor-actions">
+                    <button id="btn-voice" class="action-btn small">&#127908; Voice</button>
+                    <button id="btn-spell" class="action-btn small">&#10003; Spell</button>
+                    <button id="btn-ai" class="action-btn small">&#129302; AI</button>
+                    <button id="btn-email" class="action-btn small">&#9993; Email</button>
+                    <button id="btn-save" class="action-btn small save-btn">&#128190; Save</button>
+                </div>
+            </div>
+        </div>
+    </div>
+
+    <script>
+// State Management
+var notes = [];
+var currentNoteId = null;
+var isRecording = false;
+var pendingAIRequest = false;
+
+var MAX_PHOTO_WIDTH = 400;
+var MAX_PHOTO_QUALITY = 0.5;
+
+// ============================================
+// UI Toast Notification (Replaces alert)
+// ============================================
+function showToast(msg) {
+  var toast = document.getElementById('app-toast');
+  if (!toast) {
+    toast = document.createElement('div');
+    toast.id = 'app-toast';
+    toast.style.cssText = 'position:fixed; bottom:10vh; left:50%; transform:translateX(-50%); background:#FE5F00; color:#000; padding:3vw 5vw; border-radius:2vw; font-weight:bold; z-index:9999; font-size:4vw; text-align:center; box-shadow: 0 4px 10px rgba(0,0,0,0.5); pointer-events:none; transition: opacity 0.3s;';
+    document.body.appendChild(toast);
+  }
+  toast.textContent = msg;
+  toast.style.opacity = '1';
+  
+  if (window.toastTimeout) clearTimeout(window.toastTimeout);
+  window.toastTimeout = setTimeout(function() {
+    toast.style.opacity = '0';
+  }, 2500);
+}
+
+// ============================================
+// Storage (Standard localStorage)
+// ============================================
+function saveNotes() {
   try {
-    localStorage.setItem(STORAGE_KEY, JSON.stringify(foodLog));
-    localStorage.setItem(PHOTO_STORAGE_KEY, JSON.stringify(photoStore));
+    localStorage.setItem('r1_notes_data', JSON.stringify(notes));
   } catch (e) {
-    console.error("Failed to save data locally:", e);
+    console.error('Error saving notes:', e);
+    showToast('Storage full! Could not save.');
   }
 }
 
-function loadData() {
-  try {
-    const stored = localStorage.getItem(STORAGE_KEY);
-    if (stored) {
-      foodLog = JSON.parse(stored);
+function loadNotes() {
+  var local = localStorage.getItem('r1_notes_data');
+  if (local) {
+    try {
+      notes = JSON.parse(local);
+    } catch(e) {
+      notes = [];
     }
-  } catch (e) {
-    console.error("Failed to load food log:", e);
-    foodLog = {};
+  } else {
+    notes = [];
+  }
+}
+
+// ============================================
+// Spell Check
+// ============================================
+var COMMON_MISSPELLINGS = {
+  'teh': 'the', 'recieve': 'receive', 'occured': 'occurred', 'seperate': 'separate',
+  'definately': 'definitely', 'accomodate': 'accommodate', 'wierd': 'weird',
+  'untill': 'until', 'wich': 'which', 'becuase': 'because', 'beleive': 'believe',
+  'alot': 'a lot', 'doesnt': "doesn't", 'dont': "don't", 'wont': "won't",
+  'cant': "can't", 'im': "I'm", 'ive': "I've", 'youre': "you're", 'thier': 'their'
+};
+
+function spellCheck(text) {
+  var corrections = [];
+  var words = text.split(/(\s+)/);
+
+  for (var i = 0; i < words.length; i++) {
+    var word = words[i].toLowerCase().replace(/[.,!?;:'"()]/g, '');
+    if (COMMON_MISSPELLINGS[word]) {
+      var original = words[i];
+      var punctMatch = original.match(/[.,!?;:'"()]+$/);
+      var punctuation = punctMatch ? punctMatch[0] : '';
+      var cleanWord = original.replace(/[.,!?;:'"()]/g, '');
+      var suggestion = COMMON_MISSPELLINGS[word];
+      var capitalized = cleanWord[0] === cleanWord[0].toUpperCase()
+        ? suggestion.charAt(0).toUpperCase() + suggestion.slice(1)
+        : suggestion;
+      words[i] = capitalized + punctuation;
+      corrections.push('"' + cleanWord + '" \u2192 "' + capitalized + '"');
+    }
+  }
+  return { corrected: words.join(''), corrections: corrections };
+}
+
+// ============================================
+// ICS Calendar File Generation
+// ============================================
+function generateICS(note) {
+  if (!note.reminderDate) return '';
+  var now = new Date();
+  var uid = 'r1note-' + note.id + '@r1device';
+  var formatDate = function(d) { return d.toISOString().replace(/[-:]/g, '').replace(/\.\d{3}/, ''); };
+
+  var dtstart, dtend;
+  if (note.reminderType === 'allday') {
+    var dateStr = note.reminderDate.replace(/-/g, '');
+    dtstart = 'DTSTART;VALUE=DATE:' + dateStr;
+    dtend = 'DTEND;VALUE=DATE:' + dateStr;
+  } else {
+    var dt = new Date(note.reminderDate + 'T' + (note.reminderTime || '09:00'));
+    if (isNaN(dt.getTime())) return ''; // Guard against invalid parsing
+    var endDt = new Date(dt.getTime() + 60 * 60 * 1000);
+    dtstart = 'DTSTART:' + formatDate(dt);
+    dtend = 'DTEND:' + formatDate(endDt);
+  }
+
+  return [
+    'BEGIN:VCALENDAR', 'VERSION:2.0', 'PRODID:-//R1Notes//EN',
+    'BEGIN:VEVENT', 'UID:' + uid, 'DTSTAMP:' + formatDate(now),
+    dtstart, dtend, 'SUMMARY:' + (note.subject || 'Note Reminder'),
+    'DESCRIPTION:' + (note.body || '').replace(/\n/g, '\\n').substring(0, 200),
+    'END:VEVENT', 'END:VCALENDAR'
+  ].join('\r\n');
+}
+
+// ============================================
+// Native Rabbit OS Email Integration
+// ============================================
+function sendEmail(note) {
+  if (!note) return;
+  var subject = note.subject || 'Note from R1';
+  var body = note.body || '';
+
+  if (note.reminderType !== 'none' && note.reminderDate) {
+    body += '\n\n--- Reminder ---\n';
+    body += note.reminderType === 'allday' 
+      ? 'All Day: ' + note.reminderDate 
+      : 'Date/Time: ' + note.reminderDate + ' ' + (note.reminderTime || '');
+    body += '\n\n--- ICS Calendar Invite Content ---\n';
+    body += generateICS(note);
+  }
+
+  if (typeof PluginMessageHandler !== "undefined" && PluginMessageHandler.postMessage) {
+    PluginMessageHandler.postMessage(JSON.stringify({ action: "email", subject: subject, body: body }));
+    showToast('Email dispatched! ✉️');
+  } else {
+    showToast('Email simulated (Testing)');
+  }
+}
+
+// ============================================
+// View Management
+// ============================================
+function showView(viewId) {
+  document.querySelectorAll('.view').forEach(function(v) { v.classList.remove('active'); });
+  document.getElementById(viewId).classList.add('active');
+}
+
+// ============================================
+// Note List Rendering
+// ============================================
+function renderNotesList(notesToRender) {
+  var list = document.getElementById('notes-list');
+  var items = notesToRender || notes;
+
+  if (!items || items.length === 0) {
+    list.innerHTML = '<div class="empty-state">No notes yet.<br>Tap \uFF0B or press side button to create one.</div>';
+    return;
+  }
+
+  var sorted = items.slice().sort(function(a, b) { return b.updatedAt - a.updatedAt; });
+  list.innerHTML = sorted.map(function(note) {
+    var date = new Date(note.updatedAt).toLocaleDateString();
+    var reminderHtml = '';
+    if (note.reminderType === 'allday' && note.reminderDate) {
+      reminderHtml = '<div class="note-item-reminder">\uD83D\uDCC5 ' + note.reminderDate + ' (All Day)</div>';
+    } else if (note.reminderType === 'datetime' && note.reminderDate) {
+      reminderHtml = '<div class="note-item-reminder">\u23F0 ' + note.reminderDate + ' ' + (note.reminderTime || '') + '</div>';
+    }
+    var photoCount = (note.photos && note.photos.length > 0) ? '<div class="note-item-photos">\uD83D\uDCF7 ' + note.photos.length + ' photo' + (note.photos.length > 1 ? 's' : '') + '</div>' : '';
+    return '<div class="note-item" data-id="' + note.id + '">' +
+      '<div class="note-item-subject">' + escapeHtml(note.subject || 'Untitled') + '</div>' +
+      '<div class="note-item-meta">' + date + '</div>' + reminderHtml + photoCount + '</div>';
+  }).join('');
+
+  list.querySelectorAll('.note-item').forEach(function(el) {
+    el.addEventListener('click', function() { openNote(el.dataset.id); });
+  });
+}
+
+function escapeHtml(str) {
+  var div = document.createElement('div');
+  div.textContent = str;
+  return div.innerHTML;
+}
+
+// ============================================
+// Note CRUD
+// ============================================
+function createNote() {
+  var note = {
+    id: Date.now().toString(36) + Math.random().toString(36).substring(2, 7),
+    subject: '', body: '', photos: [], reminderType: 'none',
+    reminderDate: '', reminderTime: '', createdAt: Date.now(), updatedAt: Date.now()
+  };
+  notes.push(note);
+  openNote(note.id);
+}
+
+function openNote(id) {
+  var note = notes.find(function(n) { return n.id === id; });
+  if (!note) return;
+  currentNoteId = id;
+
+  document.getElementById('note-subject').value = note.subject || '';
+  document.getElementById('note-body').value = note.body || '';
+  document.getElementById('reminder-type').value = note.reminderType || 'none';
+  document.getElementById('reminder-date').value = note.reminderDate || '';
+  document.getElementById('reminder-time').value = note.reminderTime || '';
+
+  if (!note.photos) note.photos = [];
+  renderPhotos(note.photos);
+  updateReminderFields();
+  showView('view-editor');
+}
+
+function saveCurrentNote() {
+  if (!currentNoteId) return;
+  var note = notes.find(function(n) { return n.id === currentNoteId; });
+  if (!note) return;
+
+  note.subject = document.getElementById('note-subject').value.trim();
+  note.body = document.getElementById('note-body').value;
+  note.reminderType = document.getElementById('reminder-type').value;
+  note.reminderDate = document.getElementById('reminder-date').value;
+  note.reminderTime = document.getElementById('reminder-time').value;
+  note.updatedAt = Date.now();
+
+  saveNotes();
+  renderNotesList();
+}
+
+function deleteCurrentNote() {
+  if (!currentNoteId) return;
+  var btn = document.getElementById('btn-delete');
+  
+  if (btn.dataset.confirm !== 'true') {
+    btn.dataset.confirm = 'true';
+    btn.innerHTML = 'Sure?';
+    btn.style.backgroundColor = '#cc0000';
+    
+    if (btn.confirmTimeout) clearTimeout(btn.confirmTimeout);
+    btn.confirmTimeout = setTimeout(function() {
+      btn.dataset.confirm = 'false';
+      btn.innerHTML = '&#128465;';
+      btn.style.backgroundColor = '';
+    }, 3000);
+    return;
   }
   
-  try {
-    const photoStored = localStorage.getItem(PHOTO_STORAGE_KEY);
-    if (photoStored) {
-      photoStore = JSON.parse(photoStored);
-    }
-  } catch (e) {
-    console.error("Failed to load photos:", e);
-    photoStore = {};
-  }
+  if (btn.confirmTimeout) clearTimeout(btn.confirmTimeout);
+  btn.dataset.confirm = 'false';
+  btn.innerHTML = '&#128465;';
+  btn.style.backgroundColor = '';
+  
+  notes = notes.filter(function(n) { return n.id !== currentNoteId; });
+  currentNoteId = null;
+  saveNotes();
+  showView('view-list');
+  renderNotesList();
+  showToast('Note deleted');
 }
 
-// ===== Date Helpers =====
+// ============================================
+// Photo Management
+// ============================================
+function renderPhotos(photos) {
+  var grid = document.getElementById('photos-grid');
+  if (!photos || photos.length === 0) { grid.innerHTML = ''; return; }
+  grid.innerHTML = photos.map(function(dataUrl, idx) {
+    return '<div class="photo-thumb">' +
+      '<img src="' + dataUrl + '" alt="Photo ' + (idx + 1) + '">' +
+      '<button class="photo-remove" data-idx="' + idx + '">\u00D7</button></div>';
+  }).join('');
 
-function getDateKey(date) {
-  const y = date.getFullYear();
-  const m = String(date.getMonth() + 1).padStart(2, '0');
-  const d = String(date.getDate()).padStart(2, '0');
-  return `${y}-${m}-${d}`;
-}
-
-function formatDate(date) {
-  const today = new Date();
-  const key = getDateKey(date);
-  const todayKey = getDateKey(today);
-  const yesterday = new Date(today);
-  yesterday.setDate(yesterday.getDate() - 1);
-  const yesterdayKey = getDateKey(yesterday);
-
-  if (key === todayKey) return 'Today';
-  if (key === yesterdayKey) return 'Yesterday';
-
-  return date.toLocaleDateString('en-US', { month: 'short', day: 'numeric' });
-}
-
-function navigateDate(direction) {
-  currentDate.setDate(currentDate.getDate() + direction);
-  render();
-}
-
-// ===== Food Log Management =====
-
-function getEntriesForDate(date) {
-  const key = getDateKey(date);
-  return foodLog[key] || [];
-}
-
-function addFoodEntry(entry) {
-  const key = getDateKey(currentDate);
-  if (!foodLog[key]) foodLog[key] = [];
-  foodLog[key].push(entry);
-  saveData();
-  render();
-}
-
-function calculateTotals(entries) {
-  return entries.reduce((acc, e) => {
-    acc.calories += e.calories || 0;
-    acc.protein += e.protein || 0;
-    acc.carbs += e.carbs || 0;
-    acc.fat += e.fat || 0;
-    return acc;
-  }, { calories: 0, protein: 0, carbs: 0, fat: 0 });
-}
-
-function deleteFoodEntry(index) {
-  const key = getDateKey(currentDate);
-  if (foodLog[key] && foodLog[key][index] !== undefined) {
-    foodLog[key].splice(index, 1);
-    // Also remove associated photo
-    const photoKey = `${key}_${index}`;
-    delete photoStore[photoKey];
-    // Re-index photos for entries after deleted one
-    const reindexed = {};
-    Object.keys(photoStore).forEach(k => {
-      if (k.startsWith(key + '_')) {
-        const i = parseInt(k.split('_').pop());
-        if (i > index) {
-          reindexed[`${key}_${i - 1}`] = photoStore[k];
-        } else {
-          reindexed[k] = photoStore[k];
-        }
-      } else {
-        reindexed[k] = photoStore[k];
-      }
-    });
-    photoStore = reindexed;
-    if (foodLog[key].length === 0) delete foodLog[key];
-    saveData();
-    render();
-    setStatus('Item removed', false);
-  }
-}
-
-// ===== Day Picker =====
-
-function getSavedDays() {
-  return Object.keys(foodLog).sort().reverse();
-}
-
-function openDayPicker() {
-  const overlay = document.getElementById('day-picker-overlay');
-  const list = document.getElementById('day-picker-list');
-  const days = getSavedDays();
-
-  if (days.length === 0) {
-    list.innerHTML = '<div class="day-picker-empty">No saved days</div>';
-  } else {
-    list.innerHTML = days.map(key => {
-      const entries = foodLog[key];
-      const totals = calculateTotals(entries);
-      const d = new Date(key + 'T12:00:00');
-      const label = d.toLocaleDateString('en-US', { weekday: 'short', month: 'short', day: 'numeric' });
-      return `<button class="day-picker-item" data-key="${key}">
-        <span class="day-label">${label}</span>
-        <span class="day-summary">${entries.length} items · ${totals.calories} cal</span>
-      </button>`;
-    }).join('');
-  }
-
-  overlay.classList.remove('hidden');
-
-  list.querySelectorAll('.day-picker-item').forEach(btn => {
-    btn.addEventListener('click', () => {
-      const key = btn.dataset.key;
-      currentDate = new Date(key + 'T12:00:00');
-      closeDayPicker();
-      render();
+  grid.querySelectorAll('.photo-remove').forEach(function(btn) {
+    btn.addEventListener('click', function(e) {
+      e.stopPropagation();
+      removePhoto(parseInt(btn.dataset.idx));
     });
   });
 }
 
-function closeDayPicker() {
-  document.getElementById('day-picker-overlay').classList.add('hidden');
+function removePhoto(idx) {
+  var note = notes.find(function(n) { return n.id === currentNoteId; });
+  if (!note || !note.photos) return;
+  note.photos.splice(idx, 1);
+  renderPhotos(note.photos);
+  saveNotes();
 }
 
-// ===== Photo Capture =====
+function compressAndAddPhoto(file) {
+  var reader = new FileReader();
+  reader.onload = function(e) {
+    var img = new Image();
+    img.onload = function() {
+      var canvas = document.createElement('canvas');
+      var w = img.width, h = img.height;
+      if (w > MAX_PHOTO_WIDTH) { h = Math.round(h * (MAX_PHOTO_WIDTH / w)); w = MAX_PHOTO_WIDTH; }
+      canvas.width = w; canvas.height = h;
+      var ctx = canvas.getContext('2d');
+      ctx.drawImage(img, 0, 0, w, h);
+      var dataUrl = canvas.toDataURL('image/jpeg', MAX_PHOTO_QUALITY);
 
-function capturePhoto(index) {
-  pendingPhotoIndex = index;
-  const input = document.getElementById('camera-input');
-  if(input) {
-    input.value = '';
-    input.click();
-  }
-}
-
-function handlePhotoCapture(event) {
-  const file = event.target.files[0];
-  if (!file || pendingPhotoIndex === null) return;
-
-  const reader = new FileReader();
-  reader.onload = (e) => {
-    const key = getDateKey(currentDate);
-    const photoKey = `${key}_${pendingPhotoIndex}`;
-    // Resize image to save storage space
-    resizeImage(e.target.result, 120, (dataUrl) => {
-      photoStore[photoKey] = dataUrl;
-      saveData();
-      render();
-      setStatus('Photo saved ✓', false);
-      pendingPhotoIndex = null;
-    });
+      var note = notes.find(function(n) { return n.id === currentNoteId; });
+      if (!note) return;
+      if (!note.photos) note.photos = [];
+      note.photos.push(dataUrl);
+      renderPhotos(note.photos);
+      saveNotes();
+    };
+    img.src = e.target.result;
   };
   reader.readAsDataURL(file);
 }
 
-function resizeImage(dataUrl, maxSize, callback) {
-  const img = new Image();
-  img.onload = () => {
-    const canvas = document.createElement('canvas');
-    let w = img.width, h = img.height;
-    if (w > h) { h = (maxSize * h) / w; w = maxSize; }
-    else { w = (maxSize * w) / h; h = maxSize; }
-    canvas.width = w;
-    canvas.height = h;
-    canvas.getContext('2d').drawImage(img, 0, 0, w, h);
-    callback(canvas.toDataURL('image/jpeg', 0.6));
-  };
-  img.src = dataUrl;
+function handlePhotoInput(event) {
+  var files = event.target.files;
+  if (!files || files.length === 0) return;
+  for (var i = 0; i < files.length; i++) { compressAndAddPhoto(files[i]); }
+  event.target.value = '';
 }
 
-// ===== Voice / LLM Integration =====
+// ============================================
+// Reminder Fields Toggle
+// ============================================
+function updateReminderFields() {
+  var type = document.getElementById('reminder-type').value;
+  var fields = document.getElementById('reminder-fields');
+  var timeInput = document.getElementById('reminder-time');
 
-function startVoiceInput() {
-  if (isRecording) return;
-  isRecording = true;
-  
-  const micBtn = document.getElementById('mic-btn');
-  if(micBtn) micBtn.classList.add('recording');
-  
-  setStatus('Listening...', true);
-
-  if (typeof CreationVoiceHandler !== 'undefined') {
-    CreationVoiceHandler.postMessage('start');
+  if (type === 'none') { fields.classList.add('hidden'); } 
+  else {
+    fields.classList.remove('hidden');
+    type === 'datetime' ? timeInput.classList.remove('hidden') : timeInput.classList.add('hidden');
   }
 }
 
-// ===== Message Handler =====
+// ============================================
+// Search
+// ============================================
+function performSearch() {
+  var query = document.getElementById('search-input').value.trim().toLowerCase();
+  var dateFilter = document.getElementById('search-date').value;
+  var resultsEl = document.getElementById('search-results');
+  var results = notes;
 
-window.onPluginMessage = function(data) {
-  // Handle STT transcript
-  if (data.type === 'sttEnded' && data.transcript) {
-    processTranscript(data.transcript);
+  if (query) {
+    results = results.filter(function(n) {
+      return (n.subject || '').toLowerCase().indexOf(query) !== -1 || (n.body || '').toLowerCase().indexOf(query) !== -1;
+    });
+  }
+  if (dateFilter) results = results.filter(function(n) { return n.reminderDate === dateFilter; });
+
+  if (results.length === 0) {
+    resultsEl.innerHTML = '<div class="empty-state">No notes found.</div>';
     return;
   }
 
-  // Handle LLM response
-  let responseText = null;
-  if (data.data) {
-    responseText = typeof data.data === 'string' ? data.data : JSON.stringify(data.data);
-  } else if (data.message) {
-    responseText = data.message;
-  }
+  var sorted = results.slice().sort(function(a, b) { return b.updatedAt - a.updatedAt; });
+  resultsEl.innerHTML = sorted.map(function(note) {
+    var date = new Date(note.updatedAt).toLocaleDateString();
+    var reminderHtml = (note.reminderType !== 'none' && note.reminderDate) 
+      ? '<div class="note-item-reminder">\uD83D\uDCC5 ' + note.reminderDate + '</div>' : '';
+    return '<div class="note-item" data-id="' + note.id + '">' +
+      '<div class="note-item-subject">' + escapeHtml(note.subject || 'Untitled') + '</div>' +
+      '<div class="note-item-meta">' + date + '</div>' + reminderHtml + '</div>';
+  }).join('');
 
-  if (responseText) {
-    try {
-      // Try to extract JSON from the response
-      const jsonMatch = responseText.match(/\{[\s\S]*\}/);
-      if (jsonMatch) {
-        const parsed = JSON.parse(jsonMatch[0]);
-        handleMacroResponse(parsed);
-      } else {
-        setStatus('No valid data in response', false);
-      }
-    } catch (e) {
-      setStatus('Error parsing response', false);
-    }
-  }
-};
+  resultsEl.querySelectorAll('.note-item').forEach(function(el) {
+    el.addEventListener('click', function() { openNote(el.dataset.id); });
+  });
+}
 
-function stopVoiceInput() {
-  if (!isRecording) return;
-  isRecording = false;
-  
-  const micBtn = document.getElementById('mic-btn');
-  if(micBtn) micBtn.classList.remove('recording');
-  
-  setStatus('Processing...', true);
-
-  if (typeof CreationVoiceHandler !== 'undefined') {
-    CreationVoiceHandler.postMessage('stop');
+// ============================================
+// Voice Recording (STT)
+// ============================================
+function toggleVoiceRecording() {
+  var btn = document.getElementById('btn-voice');
+  if (!isRecording) {
+    isRecording = true;
+    btn.classList.add('recording');
+    btn.textContent = '\u23F9 Stop';
+    if (typeof CreationVoiceHandler !== 'undefined') CreationVoiceHandler.postMessage('start');
+  } else {
+    isRecording = false;
+    btn.classList.remove('recording');
+    btn.textContent = '\uD83C\uDFA4 Voice';
+    if (typeof CreationVoiceHandler !== 'undefined') CreationVoiceHandler.postMessage('stop');
   }
 }
 
-function processTranscript(transcript) {
-  if (!transcript || !transcript.trim()) {
-    setStatus('No input detected', false);
-    return;
-  }
-  setStatus('Analyzing: ' + transcript, true);
-  requestMacros(transcript);
-}
+// ============================================
+// AI Integration
+// ============================================
+function sendToAI() {
+  var body = document.getElementById('note-body');
+  var text = body.value.trim();
+  if (!text) { showToast('Write a question first.'); return; }
 
-function requestMacros(foodText) {
-  const prompt = `I ate: "${foodText}". Determine the macro breakdown. Respond ONLY with valid JSON in this exact format, no other text: {"foods":[{"name":"food name","calories":000,"protein":00,"carbs":00,"fat":00}]}. If multiple foods are mentioned, include each as a separate item. Use realistic nutritional values for typical serving sizes.`;
+  var lines = text.split('\n');
+  var question = lines[lines.length - 1].trim() || text;
+
+  pendingAIRequest = true;
+  body.value += '\n\nUSER: ' + question + '\nAI: (thinking...)';
 
   if (typeof PluginMessageHandler !== 'undefined') {
     PluginMessageHandler.postMessage(JSON.stringify({
-      message: prompt,
+      message: 'Answer this question concisely in 1-2 sentences: ' + question,
       useLLM: true
     }));
   } else {
-    // Demo fallback for browser testing
-    setTimeout(() => {
-      const demo = {
-        foods: [{ name: foodText, calories: 250, protein: 12, carbs: 30, fat: 8 }]
-      };
-      handleMacroResponse(demo);
-    }, 500);
+    setTimeout(function() { handleAIResponse('AI simulation (testing).'); }, 1000);
   }
 }
 
-function handleMacroResponse(data) {
-  if (data && data.foods && Array.isArray(data.foods)) {
-    data.foods.forEach(food => {
-      addFoodEntry({
-        name: food.name || 'Unknown',
-        calories: Math.round(food.calories || 0),
-        protein: Math.round(food.protein || 0),
-        carbs: Math.round(food.carbs || 0),
-        fat: Math.round(food.fat || 0),
-        time: Date.now()
-      });
-    });
-    setStatus('Added ' + data.foods.length + ' item(s)', false);
-  } else {
-    setStatus('Could not parse food data', false);
-  }
+function handleAIResponse(response) {
+  if (!pendingAIRequest) return;
+  pendingAIRequest = false;
+  var body = document.getElementById('note-body');
+  body.value = body.value.replace('AI: (thinking...)', 'AI: ' + response);
+  saveCurrentNote();
 }
 
-// ===== Rendering =====
+// ============================================
+// Plugin Message Handler (R1 Events)
+// ============================================
+window.onPluginMessage = function(data) {
+  var payloadObj = data;
+  if (typeof data === 'string') { try { payloadObj = JSON.parse(data); } catch(e) {} }
 
-function render() {
-  const entries = getEntriesForDate(currentDate);
-  const totals = calculateTotals(entries);
-
-  const dateDisplay = document.getElementById('date-display');
-  if(dateDisplay) dateDisplay.textContent = formatDate(currentDate);
-  
-  const totalCal = document.getElementById('total-cal');
-  if(totalCal) totalCal.textContent = totals.calories;
-  
-  const totalPro = document.getElementById('total-protein');
-  if(totalPro) totalPro.textContent = totals.protein + 'g';
-  
-  const totalCarb = document.getElementById('total-carbs');
-  if(totalCarb) totalCarb.textContent = totals.carbs + 'g';
-  
-  const totalFat = document.getElementById('total-fat');
-  if(totalFat) totalFat.textContent = totals.fat + 'g';
-
-  const listEl = document.getElementById('food-list');
-  if (!listEl) return;
-
-  if (entries.length === 0) {
-    listEl.innerHTML = '<div class="empty-state"><div class="icon">🍽️</div><div>No food logged</div><div>Tap 🎤 or hold PTT to add</div></div>';
+  if (payloadObj && payloadObj.type === 'sttEnded' && payloadObj.transcript) {
+    var body = document.getElementById('note-body');
+    if (body && document.getElementById('view-editor').classList.contains('active')) {
+      var current = body.value;
+      body.value = current + (current ? ' ' : '') + payloadObj.transcript;
+      saveCurrentNote();
+    }
+    isRecording = false;
+    var btn = document.getElementById('btn-voice');
+    if (btn) { btn.classList.remove('recording'); btn.textContent = '\uD83C\uDFA4 Voice'; }
     return;
   }
 
-  const dateKey = getDateKey(currentDate);
-  listEl.innerHTML = entries.map((e, i) => {
-    const photoKey = `${dateKey}_${i}`;
-    const hasPhoto = photoStore[photoKey];
-    return `
-    <div class="food-entry">
-      <div class="food-row">
-        <div class="food-name">${e.name}</div>
-        <div class="food-actions">
-          <button class="camera-btn" data-index="${i}" aria-label="Photo">${hasPhoto ? '🖼️' : '📷'}</button>
-          <button class="delete-btn" data-index="${i}" aria-label="Delete">✕</button>
-        </div>
-      </div>
-      ${hasPhoto ? `<img class="food-photo" src="${photoStore[photoKey]}" alt="${e.name}">` : ''}
-      <div class="food-macros">
-        <span>${e.calories} cal</span>
-        <span>${e.protein}g P</span>
-        <span>${e.carbs}g C</span>
-        <span>${e.fat}g F</span>
-      </div>
-    </div>`;
-  }).join('');
-
-  listEl.querySelectorAll('.delete-btn').forEach(btn => {
-    btn.addEventListener('click', (e) => {
-      e.stopPropagation();
-      deleteFoodEntry(parseInt(btn.dataset.index));
-    });
-  });
-
-  listEl.querySelectorAll('.camera-btn').forEach(btn => {
-    btn.addEventListener('click', (e) => {
-      e.stopPropagation();
-      capturePhoto(parseInt(btn.dataset.index));
-    });
-  });
-}
-
-function setStatus(text, active) {
-  const el = document.getElementById('status-bar');
-  if (!el) return;
-  el.textContent = text;
-  el.className = active ? 'active' : '';
-  if (!active) {
-    setTimeout(() => { el.textContent = ''; }, 3000);
+  if (pendingAIRequest) {
+    var response = '';
+    if (payloadObj && payloadObj.data) {
+      try {
+        var parsed = typeof payloadObj.data === 'string' ? JSON.parse(payloadObj.data) : payloadObj.data;
+        response = parsed.message || parsed.response || parsed.text || JSON.stringify(parsed);
+      } catch (e) { response = payloadObj.data; }
+    } else if (payloadObj && payloadObj.message) { response = payloadObj.message; }
+    if (response) handleAIResponse(response);
   }
-}
+};
 
-// ===== Event Handlers =====
+// ============================================
+// Hardware Events
+// ============================================
+window.addEventListener('sideClick', function() {
+  if (document.getElementById('view-editor').classList.contains('active')) return;
+  createNote();
+});
 
-// Scroll wheel for date navigation
-window.addEventListener('scrollUp', () => navigateDate(1));
-window.addEventListener('scrollDown', () => navigateDate(-1));
+window.addEventListener('longPressStart', function() {
+  if (document.getElementById('view-editor').classList.contains('active') && typeof CreationVoiceHandler !== 'undefined') {
+    isRecording = true;
+    var btn = document.getElementById('btn-voice');
+    if (btn) { btn.classList.add('recording'); btn.textContent = '\u23F9 Stop'; }
+    CreationVoiceHandler.postMessage('start');
+  }
+});
 
-// PTT button for voice input
-window.addEventListener('longPressStart', () => startVoiceInput());
-window.addEventListener('longPressEnd', () => stopVoiceInput());
-
-// Side click as alternative trigger
-window.addEventListener('sideClick', () => {
+window.addEventListener('longPressEnd', function() {
   if (isRecording) {
-    stopVoiceInput();
-  } else {
-    startVoiceInput();
-    setTimeout(() => stopVoiceInput(), 5000);
+    isRecording = false;
+    var btn = document.getElementById('btn-voice');
+    if (btn) { btn.classList.remove('recording'); btn.textContent = '\uD83C\uDFA4 Voice'; }
+    if (typeof CreationVoiceHandler !== 'undefined') CreationVoiceHandler.postMessage('stop');
   }
 });
 
-// Touch swipe for date navigation
-document.addEventListener('touchstart', (e) => {
-  touchStartX = e.touches[0].clientX;
-}, { passive: true });
+// ============================================
+// Initialization
+// ============================================
+document.addEventListener('DOMContentLoaded', function() {
+  loadNotes();
+  renderNotesList();
 
-document.addEventListener('touchend', (e) => {
-  const diff = e.changedTouches[0].clientX - touchStartX;
-  if (Math.abs(diff) > 50) {
-    navigateDate(diff > 0 ? -1 : 1);
-  }
-}, { passive: true });
+  document.getElementById('btn-new').addEventListener('click', createNote);
+  document.getElementById('btn-search').addEventListener('click', function() { showView('view-search'); });
+  document.getElementById('btn-search-back').addEventListener('click', function() { showView('view-list'); renderNotesList(); });
+  document.getElementById('btn-editor-back').addEventListener('click', function() {
+    saveCurrentNote(); currentNoteId = null; showView('view-list'); renderNotesList();
+  });
 
-// ===== Initialization =====
+  document.getElementById('btn-photo').addEventListener('click', function() { document.getElementById('photo-input').click(); });
+  document.getElementById('photo-input').addEventListener('change', handlePhotoInput);
 
-document.addEventListener('DOMContentLoaded', () => {
-  // Load local storage synchronously
-  loadData();
-  render();
-
-  // Save button handler
-  const saveBtn = document.getElementById('save-btn');
-  if(saveBtn) {
-    saveBtn.addEventListener('click', () => {
-      saveBtn.classList.add('saving');
-      saveData();
-      setStatus('Saved ✓', false);
-      setTimeout(() => saveBtn.classList.remove('saving'), 600);
-    });
-  }
-
-  // Open button handler
-  const openBtn = document.getElementById('open-btn');
-  if(openBtn) openBtn.addEventListener('click', () => openDayPicker());
-
-  // Day picker close
-  const dpClose = document.getElementById('day-picker-close');
-  if(dpClose) dpClose.addEventListener('click', closeDayPicker);
+  document.getElementById('btn-save').addEventListener('click', function() {
+    saveCurrentNote(); showToast('Saved!');
+  });
+  document.getElementById('btn-delete').addEventListener('click', deleteCurrentNote);
+  document.getElementById('btn-voice').addEventListener('click', toggleVoiceRecording);
+  document.getElementById('btn-ai').addEventListener('click', sendToAI);
+  document.getElementById('btn-email').addEventListener('click', function() {
+    var note = notes.find(function(n) { return n.id === currentNoteId; });
+    if (note) { saveCurrentNote(); sendEmail(note); }
+  });
   
-  const dpOverlay = document.getElementById('day-picker-overlay');
-  if(dpOverlay) {
-    dpOverlay.addEventListener('click', (e) => {
-      if (e.target === e.currentTarget) closeDayPicker();
-    });
-  }
+  document.getElementById('btn-spell').addEventListener('click', function() {
+    var body = document.getElementById('note-body');
+    var result = spellCheck(body.value);
+    if (result.corrections.length > 0) {
+      body.value = result.corrected;
+      showToast('Fixed ' + result.corrections.length + ' words');
+      saveCurrentNote();
+    } else { showToast('No errors found'); }
+  });
 
-  // Camera input handler
-  const cameraInput = document.getElementById('camera-input');
-  if(cameraInput) cameraInput.addEventListener('change', handlePhotoCapture);
-
-  // Mic button handler
-  const micBtn = document.getElementById('mic-btn');
-  if(micBtn) {
-    micBtn.addEventListener('click', () => {
-      if (isRecording) {
-        stopVoiceInput();
-      } else {
-        startVoiceInput();
-        setTimeout(() => {
-          if (isRecording) stopVoiceInput();
-        }, 5000);
-      }
-    });
-  }
-
-  // Keyboard fallback for development
-  if (typeof PluginMessageHandler === 'undefined') {
-    window.addEventListener('keydown', (e) => {
-      if (e.code === 'Space') {
-        e.preventDefault();
-        window.dispatchEvent(new CustomEvent('sideClick'));
-      }
-      if (e.code === 'ArrowLeft') navigateDate(-1);
-      if (e.code === 'ArrowRight') navigateDate(1);
-    });
-  }
-
-  setStatus('Ready', false);
+  document.getElementById('reminder-type').addEventListener('change', updateReminderFields);
+  document.getElementById('btn-do-search').addEventListener('click', performSearch);
 });
+    </script>
+</body>
+</html>
