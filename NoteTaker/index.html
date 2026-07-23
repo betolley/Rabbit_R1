@@ -257,15 +257,6 @@ html, body {
     50% { opacity: 0.5; }
 }
 
-.spell-error {
-    text-decoration: underline wavy red;
-}
-
-.ai-response {
-    color: #FE5F00;
-    font-style: italic;
-}
-
 .photos-section {
     margin-bottom: 2vw;
 }
@@ -386,7 +377,7 @@ html, body {
                         <button id="btn-photo" class="action-btn small photo-btn">&#128247; Add</button>
                     </div>
                     <div id="photos-grid" class="photos-grid"></div>
-                    <input type="file" id="photo-input" accept="image/*" multiple class="hidden">
+                    <input type="file" id="photo-input" accept="image/*" capture="environment" class="hidden" multiple>
                 </div>
                 <div class="editor-actions">
                     <button id="btn-voice" class="action-btn small">&#127908; Voice</button>
@@ -400,493 +391,56 @@ html, body {
     </div>
 
     <script>
-// ============================================
-// Device Controls Library (inline)
-// ============================================
-class DeviceControls {
-  constructor() {
-    this.sideButtonEnabled = true;
-    this.scrollWheelEnabled = true;
-    this.eventListeners = new Map();
-  }
-
-  init(options = {}) {
-    this.sideButtonEnabled = options.sideButtonEnabled ?? true;
-    this.scrollWheelEnabled = options.scrollWheelEnabled ?? true;
-    
-    if (this.sideButtonEnabled) {
-      this.setupSideButtonListener();
-    }
-    
-    if (this.scrollWheelEnabled) {
-      this.setupScrollWheelListener();
-    }
-  }
-
-  setupSideButtonListener() {
-    window.addEventListener('sideClick', (event) => {
-      if (!this.sideButtonEnabled) return;
-      this.handleSideButtonClick(event);
-    });
-  }
-
-  setupScrollWheelListener() {
-    window.addEventListener('scrollUp', (event) => {
-      if (!this.scrollWheelEnabled) return;
-      this.handleScrollWheel({ direction: 'up', event });
-    });
-    
-    window.addEventListener('scrollDown', (event) => {
-      if (!this.scrollWheelEnabled) return;
-      this.handleScrollWheel({ direction: 'down', event });
-    });
-  }
-
-  handleSideButtonClick(event) {
-    const handlers = this.eventListeners.get('sideButton') || [];
-    handlers.forEach(handler => handler(event));
-  }
-
-  handleScrollWheel(data) {
-    const handlers = this.eventListeners.get('scrollWheel') || [];
-    handlers.forEach(handler => handler({
-      direction: data.direction,
-      event: data.event
-    }));
-  }
-
-  on(eventType, handler) {
-    if (!this.eventListeners.has(eventType)) {
-      this.eventListeners.set(eventType, []);
-    }
-    this.eventListeners.get(eventType).push(handler);
-  }
-
-  off(eventType, handler) {
-    const handlers = this.eventListeners.get(eventType) || [];
-    const index = handlers.indexOf(handler);
-    if (index > -1) {
-      handlers.splice(index, 1);
-    }
-  }
-
-  setSideButtonEnabled(enabled) {
-    this.sideButtonEnabled = enabled;
-  }
-
-  setScrollWheelEnabled(enabled) {
-    this.scrollWheelEnabled = enabled;
-  }
-
-  triggerSideButton() {
-    const event = new CustomEvent('sideClick', {
-      detail: { source: 'programmatic' }
-    });
-    window.dispatchEvent(event);
-  }
-}
-
-const deviceControls = new DeviceControls();
-
-// ============================================
-// Flutter Channel Communication Library (inline)
-// ============================================
-class FlutterChannel {
-  constructor() {
-    this.isFlutterAvailable = this.checkFlutterAvailability();
-    this.setupPluginMessageHandler();
-  }
-
-  checkFlutterAvailability() {
-    return typeof window !== 'undefined' && 
-           (window.FlutterButtonHandler !== undefined || 
-            window.closeWebView !== undefined ||
-            window.PluginMessageHandler !== undefined ||
-            window.TouchEventHandler !== undefined);
-  }
-
-  setupPluginMessageHandler() {
-    if (typeof window !== 'undefined' && !window.onPluginMessage) {
-      window.onPluginMessage = function(data) {
-        window.dispatchEvent(new CustomEvent('pluginMessage', { 
-          detail: data 
-        }));
-      };
-    }
-  }
-
-  sendMessage(message) {
-    console.warn('flutterChannel.sendMessage() is deprecated. Use PluginMessageHandler.postMessage() instead');
-    
-    if (window.PluginMessageHandler) {
-      try {
-        const payload = {
-          message: typeof message === 'string' ? message : JSON.stringify(message)
-        };
-        window.PluginMessageHandler.postMessage(JSON.stringify(payload));
-        return true;
-      } catch (error) {
-        console.error('Failed to send message:', error);
-        return false;
-      }
-    }
-    
-    if (window.FlutterButtonHandler) {
-      try {
-        const messageStr = typeof message === 'string' ? message : JSON.stringify(message);
-        window.FlutterButtonHandler.postMessage(messageStr);
-        return true;
-      } catch (error) {
-        console.error('Failed to send message to Flutter:', error);
-        return false;
-      }
-    }
-    
-    console.warn('No message handler available');
-    return false;
-  }
-
-  sendPluginMessage(messageObj) {
-    if (!window.PluginMessageHandler) {
-      console.warn('PluginMessageHandler not available');
-      return false;
-    }
-
-    if (typeof messageObj !== 'object' || !messageObj.message) {
-      console.error('PluginMessage must be an object with a "message" field');
-      return false;
-    }
-
-    try {
-      window.PluginMessageHandler.postMessage(JSON.stringify(messageObj));
-      return true;
-    } catch (error) {
-      console.error('Failed to send plugin message to Flutter:', error);
-      return false;
-    }
-  }
-
-  sendTouchEvent(touchData) {
-    if (!window.TouchEventHandler) {
-      console.warn('TouchEventHandler not available');
-      return false;
-    }
-
-    if (!touchData || typeof touchData.x !== 'number' || typeof touchData.y !== 'number' || !touchData.type) {
-      console.error('Touch event must have x, y coordinates and type');
-      return false;
-    }
-
-    try {
-      window.TouchEventHandler.postMessage(JSON.stringify(touchData));
-      return true;
-    } catch (error) {
-      console.error('Failed to send touch event to Flutter:', error);
-      return false;
-    }
-  }
-
-  closeWebView() {
-    if (window.closeWebView) {
-      window.closeWebView.postMessage('');
-      return true;
-    }
-    console.warn('closeWebView not available');
-    return false;
-  }
-
-  onPluginMessage(callback) {
-    if (typeof window === 'undefined') return;
-    window.addEventListener('pluginMessage', (event) => {
-      callback(event.detail);
-    });
-  }
-
-  onSideClick(callback) {
-    if (typeof window === 'undefined') return;
-    window.addEventListener('sideClick', callback);
-  }
-}
-
-const flutterChannel = new FlutterChannel();
-
-// ============================================
-// UI Design Library (inline)
-// ============================================
-class UIDesign {
-  constructor() {
-    this.screenWidth = 240;
-    this.screenHeight = 320;
-    this.aspectRatio = 3/4;
-    this.baseUnit = 'vw';
-  }
-
-  pxToVw(px) {
-    return ((px / this.screenWidth) * 100) + this.baseUnit;
-  }
-
-  getFontSizes() {
-    return {
-      title: '12.5vw',
-      large: '10vw',
-      body: '8.33vw',
-      small: '6.25vw',
-      tiny: '5vw'
-    };
-  }
-
-  getSpacing() {
-    return {
-      xs: '1.25vw',
-      sm: '2.5vw',
-      md: '3.33vw',
-      lg: '5vw',
-      xl: '7.5vw',
-      xxl: '10vw'
-    };
-  }
-
-  getButtonSizes() {
-    return {
-      wide: { width: '80vw', height: '15vw', fontSize: '8.33vw' },
-      standard: { width: '45vw', height: '15vw', fontSize: '8.33vw' },
-      small: { width: '30vw', height: '12vw', fontSize: '6.25vw' },
-      round: { width: '20vw', height: '20vw', borderRadius: '50%' }
-    };
-  }
-
-  createContainer(element, options = {}) {
-    const defaults = {
-      width: '100vw',
-      height: '133.33vw',
-      background: '#000000',
-      padding: this.getSpacing().md
-    };
-    const settings = { ...defaults, ...options };
-    Object.assign(element.style, {
-      width: settings.width,
-      height: settings.height,
-      background: settings.background,
-      padding: settings.padding,
-      boxSizing: 'border-box',
-      position: 'relative',
-      overflow: 'hidden'
-    });
-  }
-
-  createButton(button, options = {}) {
-    const sizes = this.getButtonSizes();
-    const defaults = {
-      type: 'wide',
-      background: '#FE5F00',
-      color: '#FFFFFF',
-      borderRadius: '50vw',
-      active: true
-    };
-    const settings = { ...defaults, ...options };
-    const size = sizes[settings.type] || sizes.standard;
-    Object.assign(button.style, {
-      width: size.width,
-      height: size.height,
-      fontSize: size.fontSize || this.getFontSizes().body,
-      background: settings.active ? settings.background : '#333333',
-      color: settings.color,
-      border: 'none',
-      borderRadius: settings.borderRadius,
-      display: 'flex',
-      alignItems: 'center',
-      justifyContent: 'center',
-      cursor: 'pointer',
-      fontWeight: 'bold',
-      transition: 'all 0.2s ease',
-      userSelect: 'none',
-      WebkitTapHighlightColor: 'transparent'
-    });
-    button.addEventListener('touchstart', () => {
-      button.style.transform = 'scale(0.95)';
-    });
-    button.addEventListener('touchend', () => {
-      button.style.transform = 'scale(1)';
-    });
-  }
-
-  createText(element, options = {}) {
-    const fonts = this.getFontSizes();
-    const defaults = {
-      size: 'body',
-      color: '#FFFFFF',
-      align: 'center',
-      weight: 'normal'
-    };
-    const settings = { ...defaults, ...options };
-    Object.assign(element.style, {
-      fontSize: fonts[settings.size] || settings.size,
-      color: settings.color,
-      textAlign: settings.align,
-      fontWeight: settings.weight,
-      lineHeight: '1.2',
-      margin: '0',
-      padding: '0'
-    });
-  }
-
-  createGrid(container, options = {}) {
-    const defaults = {
-      columns: 2,
-      gap: this.getSpacing().md,
-      alignItems: 'center',
-      justifyItems: 'center'
-    };
-    const settings = { ...defaults, ...options };
-    Object.assign(container.style, {
-      display: 'grid',
-      gridTemplateColumns: 'repeat(' + settings.columns + ', 1fr)',
-      gap: settings.gap,
-      alignItems: settings.alignItems,
-      justifyItems: settings.justifyItems,
-      width: '100%',
-      height: '100%'
-    });
-  }
-
-  getColors() {
-    return {
-      background: '#000000',
-      primary: '#FE5F00',
-      secondary: '#FFFFFF',
-      disabled: '#333333',
-      text: { primary: '#FFFFFF', secondary: '#CCCCCC', disabled: '#666666' },
-      status: { success: '#00FF00', error: '#FF0000', warning: '#FFAA00', info: '#0099FF' }
-    };
-  }
-
-  setupViewport() {
-    var viewport = document.querySelector('meta[name="viewport"]');
-    if (!viewport) {
-      viewport = document.createElement('meta');
-      viewport.name = 'viewport';
-      document.head.appendChild(viewport);
-    }
-    viewport.content = 'width=device-width, initial-scale=1, maximum-scale=1, user-scalable=no';
-  }
-
-  transition(fromElement, toElement, type, duration) {
-    type = type || 'slide';
-    duration = duration || 300;
-    switch (type) {
-      case 'slide':
-        this.slideTransition(fromElement, toElement, duration);
-        break;
-      case 'fade':
-        this.fadeTransition(fromElement, toElement, duration);
-        break;
-      case 'none':
-        fromElement.style.display = 'none';
-        toElement.style.display = 'block';
-        break;
-    }
-  }
-
-  slideTransition(fromElement, toElement, duration) {
-    toElement.style.display = 'block';
-    toElement.style.transform = 'translateX(100%)';
-    toElement.style.transition = 'transform ' + duration + 'ms ease-in-out';
-    fromElement.style.transition = 'transform ' + duration + 'ms ease-in-out';
-    setTimeout(function() {
-      fromElement.style.transform = 'translateX(-100%)';
-      toElement.style.transform = 'translateX(0)';
-    }, 10);
-    setTimeout(function() {
-      fromElement.style.display = 'none';
-      fromElement.style.transform = '';
-      fromElement.style.transition = '';
-      toElement.style.transition = '';
-    }, duration + 10);
-  }
-
-  fadeTransition(fromElement, toElement, duration) {
-    toElement.style.display = 'block';
-    toElement.style.opacity = '0';
-    toElement.style.transition = 'opacity ' + duration + 'ms ease-in-out';
-    fromElement.style.transition = 'opacity ' + duration + 'ms ease-in-out';
-    setTimeout(function() {
-      fromElement.style.opacity = '0';
-      toElement.style.opacity = '1';
-    }, 10);
-    setTimeout(function() {
-      fromElement.style.display = 'none';
-      fromElement.style.opacity = '';
-      fromElement.style.transition = '';
-      toElement.style.transition = '';
-    }, duration + 10);
-  }
-}
-
-const uiDesign = new UIDesign();
-
-// ============================================
-// R1 Notes - Full-featured note-taking app
-// ============================================
-
 // State Management
 var notes = [];
 var currentNoteId = null;
 var isRecording = false;
 var pendingAIRequest = false;
 
-// ⚠️ REQUIRED: Replace with your actual hosted backend API URL
-const BACKEND_URL = 'https://your-api-proxy.com/api'; 
-
 var MAX_PHOTO_WIDTH = 800;
 var MAX_PHOTO_QUALITY = 0.7;
 
 // ============================================
-// Storage (UPDATED - Using Fetch API for Persistence)
+// Storage (Native R1 creationStorage Persistence)
 // ============================================
 async function saveNotes() {
-  try {
-    // Send data to your external backend to bypass the R1's ephemeral storage limits
-    await fetch(`${BACKEND_URL}/save`, {
-      method: 'POST',
-      headers: { 'Content-Type': 'application/json' },
-      body: JSON.stringify({ notes: notes })
-    });
-    console.log('Notes saved to backend successfully.');
-  } catch (e) {
-    console.error('Save error:', e);
-    // Fallback to local storage only for session-level safety
-    if (window.creationStorage) {
-      var encoded = btoa(JSON.stringify(notes));
-      window.creationStorage.plain.setItem('r1_notes', encoded);
-    } else {
-      localStorage.setItem('r1_notes', JSON.stringify(notes));
+  var encoded = btoa(JSON.stringify(notes));
+  if (window.creationStorage && window.creationStorage.plain) {
+    try {
+      await window.creationStorage.plain.setItem('r1_notes_data', encoded);
+      console.log('Notes saved to creationStorage.');
+      return;
+    } catch(e) {
+      console.warn('creationStorage error, falling back to localStorage:', e);
     }
   }
+  localStorage.setItem('r1_notes_data', JSON.stringify(notes));
 }
 
 async function loadNotes() {
-  try {
-    const response = await fetch(`${BACKEND_URL}/load`);
-    if (response.ok) {
-      const data = await response.json();
-      notes = data.notes || [];
-    }
-  } catch (e) {
-    console.error('Load error from backend, trying local fallback:', e);
-    if (window.creationStorage) {
-      var stored = await window.creationStorage.plain.getItem('r1_notes');
+  if (window.creationStorage && window.creationStorage.plain) {
+    try {
+      var stored = await window.creationStorage.plain.getItem('r1_notes_data');
       if (stored) {
         notes = JSON.parse(atob(stored));
+        return;
       }
-    } else {
-      var stored = localStorage.getItem('r1_notes');
-      if (stored) notes = JSON.parse(stored);
+    } catch(e) {
+      console.warn('creationStorage load error, trying localStorage:', e);
+    }
+  }
+  var local = localStorage.getItem('r1_notes_data');
+  if (local) {
+    try {
+      notes = JSON.parse(local);
+    } catch(e) {
+      notes = [];
     }
   }
 }
 
 // ============================================
-// Simple Spell Check (common misspellings)
+// Spell Check
 // ============================================
 var COMMON_MISSPELLINGS = {
   'teh': 'the', 'recieve': 'receive', 'occured': 'occurred',
@@ -911,11 +465,10 @@ var COMMON_MISSPELLINGS = {
   'alot': 'a lot', 'doesnt': "doesn't", 'dont': "don't", 'wont': "won't",
   'cant': "can't", 'shouldnt': "shouldn't", 'wouldnt': "wouldn't",
   'im': "I'm", 'ive': "I've", 'youre': "you're", 'theyre': "they're",
-  'arent': "aren't", 'isnt': "isn't", 'wasnt': "wasn't", 'didnt': "didn't"
+  'arent': "aren't", 'isnt': "isn't", 'wasnt': "wasn't", 'didnt': "didnt"
 };
 
 function spellCheck(text) {
-  var corrected = text;
   var corrections = [];
   var words = text.split(/(\s+)/);
 
@@ -935,8 +488,7 @@ function spellCheck(text) {
     }
   }
 
-  corrected = words.join('');
-  return { corrected: corrected, corrections: corrections };
+  return { corrected: words.join(''), corrections: corrections };
 }
 
 // ============================================
@@ -976,9 +528,11 @@ function generateICS(note) {
 }
 
 // ============================================
-// Email (UPDATED - Routing through Backend Proxy)
+// Native Rabbit OS Email Integration
 // ============================================
-async function sendEmail(note) {
+function sendEmail(note) {
+  if (!note) return;
+
   var subject = note.subject || 'Note from R1';
   var body = note.body || '';
 
@@ -987,26 +541,19 @@ async function sendEmail(note) {
     body += note.reminderType === 'allday' 
       ? 'All Day: ' + note.reminderDate 
       : 'Date/Time: ' + note.reminderDate + ' ' + (note.reminderTime || '');
-    body += '\n\nNote: A calendar .ics file would be attached. Save it to add this event to your calendar.';
-    body += '\n\n--- ICS Content (copy to .ics file) ---\n';
+    body += '\n\n--- ICS Calendar Invite Content ---\n';
     body += generateICS(note);
   }
 
-  try {
-    // Rely on your backend to construct and send the email (e.g., via SendGrid or Nodemailer)
-    await fetch(`${BACKEND_URL}/email`, {
-      method: 'POST',
-      headers: { 'Content-Type': 'application/json' },
-      body: JSON.stringify({ subject: subject, body: body })
-    });
-    alert('Email dispatched via server!');
-  } catch (e) {
-    console.error('Failed to send email:', e);
-    // Fallback for browser testing - use mailto (without photos)
-    var encodedSubject = encodeURIComponent(subject);
-    var encodedBody = encodeURIComponent(body);
-    var mailto = 'mailto:?subject=' + encodedSubject + '&body=' + encodedBody;
-    window.location.href = mailto;
+  if (typeof PluginMessageHandler !== "undefined" && PluginMessageHandler.postMessage) {
+    PluginMessageHandler.postMessage(JSON.stringify({
+      action: "email",
+      subject: subject,
+      body: body
+    }));
+    alert('Dispatched note to your email! ✉️');
+  } else {
+    alert('Email simulated (Running outside Rabbit OS)');
   }
 }
 
@@ -1268,8 +815,6 @@ function toggleVoiceRecording() {
     btn.textContent = '\u23F9 Stop';
     if (typeof CreationVoiceHandler !== 'undefined') {
       CreationVoiceHandler.postMessage('start');
-    } else {
-      console.log('CreationVoiceHandler not available - simulating');
     }
   } else {
     isRecording = false;
@@ -1293,8 +838,7 @@ function sendToAI() {
   }
 
   var lines = text.split('\n');
-  var lastLine = lines[lines.length - 1].trim();
-  var question = lastLine || text;
+  var question = lines[lines.length - 1].trim() || text;
 
   pendingAIRequest = true;
   body.value += '\n\nUSER: ' + question + '\nAI: (thinking...)';
@@ -1306,7 +850,7 @@ function sendToAI() {
     }));
   } else {
     setTimeout(function() {
-      handleAIResponse('AI response not available in browser mode.');
+      handleAIResponse('AI response simulation (browser testing mode).');
     }, 1000);
   }
 }
@@ -1321,15 +865,19 @@ function handleAIResponse(response) {
 }
 
 // ============================================
-// Plugin Message Handler (UPDATED - Listening for Camera)
+// Plugin Message Handler (R1 Events)
 // ============================================
 window.onPluginMessage = function(data) {
-  // Handle STT transcript
-  if (data.type === 'sttEnded' && data.transcript) {
+  var payloadObj = data;
+  if (typeof data === 'string') {
+    try { payloadObj = JSON.parse(data); } catch(e) {}
+  }
+
+  if (payloadObj && (payloadObj.type === 'sttEnded' || payloadObj.type === 'sttStarted') && payloadObj.transcript) {
     var body = document.getElementById('note-body');
     if (body && document.getElementById('view-editor').classList.contains('active')) {
       var current = body.value;
-      body.value = current + (current ? ' ' : '') + data.transcript;
+      body.value = current + (current ? ' ' : '') + payloadObj.transcript;
       saveCurrentNote();
     }
     isRecording = false;
@@ -1341,31 +889,17 @@ window.onPluginMessage = function(data) {
     return;
   }
 
-  // Handle R1 Hardware Camera Response
-  if (data.type === 'photoCaptured' && data.imageData) {
-    var note = notes.find(function(n) { return n.id === currentNoteId; });
-    if (!note) return;
-    if (!note.photos) note.photos = [];
-    
-    // Attach the base64 image returned directly from the OS
-    note.photos.push('data:image/jpeg;base64,' + data.imageData);
-    renderPhotos(note.photos);
-    saveNotes();
-    return;
-  }
-
-  // Handle AI/LLM response
   if (pendingAIRequest) {
     var response = '';
-    if (data.data) {
+    if (payloadObj && payloadObj.data) {
       try {
-        var parsed = typeof data.data === 'string' ? JSON.parse(data.data) : data.data;
+        var parsed = typeof payloadObj.data === 'string' ? JSON.parse(payloadObj.data) : payloadObj.data;
         response = parsed.message || parsed.response || parsed.text || JSON.stringify(parsed);
       } catch (e) {
-        response = data.data;
+        response = payloadObj.data;
       }
-    } else if (data.message) {
-      response = data.message;
+    } else if (payloadObj && payloadObj.message) {
+      response = payloadObj.message;
     }
     if (response) {
       handleAIResponse(response);
@@ -1410,9 +944,6 @@ window.addEventListener('longPressEnd', function() {
   }
 });
 
-window.addEventListener('scrollUp', function() {});
-window.addEventListener('scrollDown', function() {});
-
 // ============================================
 // Initialization
 // ============================================
@@ -1420,7 +951,7 @@ document.addEventListener('DOMContentLoaded', async function() {
   await loadNotes();
   renderNotesList();
 
-  // Navigation buttons
+  // Navigation
   document.getElementById('btn-new').addEventListener('click', createNote);
   document.getElementById('btn-search').addEventListener('click', function() { showView('view-search'); });
   document.getElementById('btn-search-back').addEventListener('click', function() {
@@ -1434,23 +965,13 @@ document.addEventListener('DOMContentLoaded', async function() {
     renderNotesList();
   });
 
-  // Photo button - Bridge request to R1 OS
+  // Photo Capture
   document.getElementById('btn-photo').addEventListener('click', function() {
-    if (typeof PluginMessageHandler !== 'undefined') {
-      // Trigger native OS camera instead of web file input
-      PluginMessageHandler.postMessage(JSON.stringify({
-        action: 'openCamera'
-      }));
-    } else {
-      // Fallback for browser testing
-      document.getElementById('photo-input').click();
-    }
+    document.getElementById('photo-input').click();
   });
-  
-  // Keep fallback file input change listener for browser testing
   document.getElementById('photo-input').addEventListener('change', handlePhotoInput);
 
-  // Editor actions
+  // Actions
   document.getElementById('btn-save').addEventListener('click', function() {
     saveCurrentNote();
     alert('Saved!');
@@ -1477,21 +998,8 @@ document.addEventListener('DOMContentLoaded', async function() {
     }
   });
 
-  // Reminder type change
   document.getElementById('reminder-type').addEventListener('change', updateReminderFields);
-
-  // Search
   document.getElementById('btn-do-search').addEventListener('click', performSearch);
-
-  // Keyboard fallback for development
-  if (typeof PluginMessageHandler === 'undefined') {
-    window.addEventListener('keydown', function(event) {
-      if (event.code === 'Space' && document.activeElement.tagName !== 'INPUT' && document.activeElement.tagName !== 'TEXTAREA' && document.activeElement.tagName !== 'SELECT') {
-        event.preventDefault();
-        window.dispatchEvent(new CustomEvent('sideClick'));
-      }
-    });
-  }
 });
     </script>
 </body>
