@@ -1,20 +1,734 @@
-transforming...
-✓ 2 modules transformed.
-x Build failed in 57ms
-error during build:
-[vite:build-import-analysis] [plugin vite:build-import-analysis] src/main.js (6:27): Failed to parse source for import analysis because the content contains invalid JS syntax. If you are using JSX, make sure to name the file with the .jsx or .tsx extension.
-file: /home/runner/work/Rabbit_R1/Rabbit_R1/CalorieCounter/src/main.js:6:27
+<!DOCTYPE html>
+<html lang="en">
+<head>
+    <meta charset="UTF-8">
+    <meta name="viewport" content="width=240, height=320, user-scalable=no, initial-scale=1.0">
+    <title>R1 Notes</title>
+    <style>
+* { margin: 0; padding: 0; box-sizing: border-box; }
 
-4:     <meta charset="UTF-8">
-5:     <meta name="viewport" content="width=240, height=320, user-scalable=no, initial-scale=1.0">
-6:     <title>R1 Notes</title>
-                              ^
-7:     <style>
-8: * { margin: 0; padding: 0; box-sizing: border-box; }
+html, body {
+    width: 100vw; height: 100vh;
+    background-color: #000; color: #fff;
+    font-family: -apple-system, BlinkMacSystemFont, "Segoe UI", Roboto, sans-serif;
+    font-size: 3.5vw; overflow: hidden;
+    -webkit-user-select: none; user-select: none;
+}
 
-    at getRollupError (file:///home/runner/work/Rabbit_R1/Rabbit_R1/CalorieCounter/node_modules/rollup/dist/es/shared/parseAst.js:317:41)
-    at error (file:///home/runner/work/Rabbit_R1/Rabbit_R1/CalorieCounter/node_modules/rollup/dist/es/shared/parseAst.js:313:42)
-    at Object.error (file:///home/runner/work/Rabbit_R1/Rabbit_R1/CalorieCounter/node_modules/rollup/dist/es/shared/node-entry.js:22704:20)
-    at Object.error (file:///home/runner/work/Rabbit_R1/Rabbit_R1/CalorieCounter/node_modules/rollup/dist/es/shared/node-entry.js:21755:42)
-    at Object.transform (file:///home/runner/work/Rabbit_R1/Rabbit_R1/CalorieCounter/node_modules/vite/dist/node/chunks/dep-BK3b2jBa.js:64913:14)
-Error: Process completed with exit code 1.
+#app { width: 100vw; height: 100vh; position: relative; }
+
+.view {
+    display: none; width: 100%; height: 100%;
+    flex-direction: column; position: absolute;
+    top: 0; left: 0;
+}
+
+.view.active { display: flex; }
+
+.header {
+    display: flex; align-items: center; padding: 2vw 3vw;
+    background: #111; border-bottom: 1px solid #333;
+    min-height: 44px; flex-shrink: 0;
+}
+
+.header-title { flex: 1; font-size: 4.5vw; font-weight: bold; color: #FE5F00; }
+
+.header-btn {
+    min-width: 36px; min-height: 36px; padding: 1.5vw 2.5vw;
+    font-size: 4vw; background: #222; color: #fff;
+    border: 1px solid #444; border-radius: 1.5vw; margin-left: 1.5vw;
+}
+
+.header-btn:active { background: #FE5F00; color: #000; }
+
+.del-btn { background: #331111; border-color: #662222; transition: all 0.2s; }
+
+.scroll-area {
+    flex: 1; overflow-y: auto; overflow-x: hidden;
+    padding: 2vw; -webkit-overflow-scrolling: touch;
+}
+
+.note-item {
+    background: #1a1a1a; border: 1px solid #333;
+    border-radius: 2vw; padding: 2.5vw 3vw; margin-bottom: 2vw;
+    min-height: 44px; display: flex; flex-direction: column;
+    justify-content: center;
+}
+
+.note-item:active { background: #2a2a2a; border-color: #FE5F00; }
+
+.note-item-subject {
+    font-size: 3.8vw; font-weight: bold; color: #fff;
+    margin-bottom: 1vw; white-space: nowrap;
+    overflow: hidden; text-overflow: ellipsis;
+}
+
+.note-item-meta { font-size: 2.8vw; color: #888; }
+.note-item-reminder { font-size: 2.8vw; color: #FE5F00; margin-top: 0.5vw; }
+
+.input-field, .select-field {
+    width: 100%; padding: 2.5vw 3vw; font-size: 3.5vw;
+    background: #1a1a1a; color: #fff; border: 1px solid #444;
+    border-radius: 1.5vw; margin-bottom: 2vw; min-height: 36px;
+}
+
+.select-field { padding: 2vw 3vw; }
+
+.input-field:focus, .select-field:focus, .textarea-field:focus {
+    border-color: #FE5F00; outline: none;
+}
+
+.textarea-field {
+    width: 100%; min-height: 80px; padding: 2.5vw 3vw;
+    font-size: 3.5vw; background: #1a1a1a; color: #fff;
+    border: 1px solid #444; border-radius: 1.5vw; resize: vertical;
+    margin-bottom: 2vw; line-height: 1.4;
+    -webkit-user-select: text; user-select: text;
+}
+
+.reminder-row, .reminder-fields { margin-bottom: 1vw; }
+.hidden { display: none !important; }
+.editor-content { padding: 3vw; }
+
+.editor-actions {
+    display: flex; flex-wrap: wrap; gap: 1.5vw; margin-top: 2vw;
+}
+
+.action-btn {
+    min-width: 44px; min-height: 44px; padding: 2.5vw 4vw;
+    font-size: 3.5vw; background: #FE5F00; color: #000;
+    border: none; border-radius: 1.5vw; font-weight: bold;
+}
+
+.action-btn:active { opacity: 0.7; }
+.action-btn.small {
+    padding: 2vw 2.5vw; font-size: 3vw;
+    min-width: 38px; min-height: 38px;
+}
+
+.save-btn { background: #00cc66; color: #000; }
+.search-form { padding: 3vw; flex-shrink: 0; }
+.empty-state { text-align: center; color: #666; padding: 10vw 5vw; font-size: 3.5vw; }
+
+.recording {
+    background: #cc0000 !important; color: #fff !important;
+    animation: pulse 1s infinite;
+}
+
+@keyframes pulse { 0%, 100% { opacity: 1; } 50% { opacity: 0.5; } }
+
+.photos-section { margin-bottom: 2vw; }
+.photos-header { display: flex; align-items: center; justify-content: space-between; margin-bottom: 1.5vw; }
+.photos-label { font-size: 3.2vw; color: #aaa; font-weight: bold; }
+.photo-btn { background: #2a4a6a; color: #fff; }
+.photos-grid { display: flex; flex-wrap: wrap; gap: 1.5vw; }
+
+.photo-thumb {
+    position: relative; width: 18vw; height: 18vw;
+    border-radius: 1.5vw; overflow: hidden; border: 1px solid #444;
+}
+
+.photo-thumb img { width: 100%; height: 100%; object-fit: cover; }
+.photo-remove {
+    position: absolute; top: 0; right: 0; width: 5vw; height: 5vw;
+    background: rgba(200, 0, 0, 0.85); color: #fff; border: none;
+    border-radius: 0 1.5vw 0 1.5vw; font-size: 3vw; line-height: 5vw; text-align: center; padding: 0;
+}
+
+.photo-thumb:active { border-color: #FE5F00; }
+.note-item-photos { font-size: 2.8vw; color: #6a9fd8; margin-top: 0.5vw; }
+    </style>
+</head>
+<body>
+    <div id="app">
+        <div id="view-list" class="view active">
+            <div class="header">
+                <span class="header-title">Notes</span>
+                <button id="btn-search" class="header-btn">&#128269;</button>
+                <button id="btn-new" class="header-btn">&#xFF0B;</button>
+            </div>
+            <div id="notes-list" class="scroll-area"></div>
+        </div>
+
+        <div id="view-search" class="view">
+            <div class="header">
+                <button id="btn-search-back" class="header-btn">&larr;</button>
+                <span class="header-title">Search</span>
+            </div>
+            <div class="search-form">
+                <input type="text" id="search-input" placeholder="Subject keyword..." class="input-field">
+                <input type="date" id="search-date" class="input-field">
+                <button id="btn-do-search" class="action-btn">Search</button>
+            </div>
+            <div id="search-results" class="scroll-area"></div>
+        </div>
+
+        <div id="view-editor" class="view">
+            <div class="header">
+                <button id="btn-editor-back" class="header-btn">&larr;</button>
+                <span class="header-title">Edit</span>
+                <button id="btn-delete" class="header-btn del-btn">&#128465;</button>
+            </div>
+            <div class="editor-content scroll-area">
+                <input type="text" id="note-subject" placeholder="Subject..." class="input-field">
+                <div class="reminder-row">
+                    <select id="reminder-type" class="select-field">
+                        <option value="none">No Reminder</option>
+                        <option value="allday">All Day</option>
+                        <option value="datetime">Date &amp; Time</option>
+                    </select>
+                </div>
+                <div id="reminder-fields" class="reminder-fields hidden">
+                    <input type="date" id="reminder-date" class="input-field">
+                    <input type="time" id="reminder-time" class="input-field hidden">
+                </div>
+                <textarea id="note-body" placeholder="Write your note..." class="textarea-field"></textarea>
+                <div class="photos-section">
+                    <div class="photos-header">
+                        <span class="photos-label">Photos</span>
+                        <button id="btn-photo" class="action-btn small photo-btn">&#128247; Add</button>
+                    </div>
+                    <div id="photos-grid" class="photos-grid"></div>
+                    <input type="file" id="photo-input" accept="image/*" capture="environment" class="hidden" multiple>
+                </div>
+                <div class="editor-actions">
+                    <button id="btn-voice" class="action-btn small">&#127908; Voice</button>
+                    <button id="btn-spell" class="action-btn small">&#10003; Spell</button>
+                    <button id="btn-ai" class="action-btn small">&#129302; AI</button>
+                    <button id="btn-email" class="action-btn small">&#9993; Email</button>
+                    <button id="btn-save" class="action-btn small save-btn">&#128190; Save</button>
+                </div>
+            </div>
+        </div>
+    </div>
+
+    <script>
+// State Management
+var notes = [];
+var currentNoteId = null;
+var isRecording = false;
+var pendingAIRequest = false;
+
+var MAX_PHOTO_WIDTH = 400;
+var MAX_PHOTO_QUALITY = 0.5;
+
+// ============================================
+// UI Toast Notification (Replaces alert)
+// ============================================
+function showToast(msg) {
+  var toast = document.getElementById('app-toast');
+  if (!toast) {
+    toast = document.createElement('div');
+    toast.id = 'app-toast';
+    toast.style.cssText = 'position:fixed; bottom:10vh; left:50%; transform:translateX(-50%); background:#FE5F00; color:#000; padding:3vw 5vw; border-radius:2vw; font-weight:bold; z-index:9999; font-size:4vw; text-align:center; box-shadow: 0 4px 10px rgba(0,0,0,0.5); pointer-events:none; transition: opacity 0.3s;';
+    document.body.appendChild(toast);
+  }
+  toast.textContent = msg;
+  toast.style.opacity = '1';
+  
+  if (window.toastTimeout) clearTimeout(window.toastTimeout);
+  window.toastTimeout = setTimeout(function() {
+    toast.style.opacity = '0';
+  }, 2500);
+}
+
+// ============================================
+// Storage (Standard localStorage)
+// ============================================
+function saveNotes() {
+  try {
+    localStorage.setItem('r1_notes_data', JSON.stringify(notes));
+  } catch (e) {
+    console.error('Error saving notes:', e);
+    showToast('Storage full! Could not save.');
+  }
+}
+
+function loadNotes() {
+  var local = localStorage.getItem('r1_notes_data');
+  if (local) {
+    try {
+      notes = JSON.parse(local);
+    } catch(e) {
+      notes = [];
+    }
+  } else {
+    notes = [];
+  }
+}
+
+// ============================================
+// Spell Check
+// ============================================
+var COMMON_MISSPELLINGS = {
+  'teh': 'the', 'recieve': 'receive', 'occured': 'occurred', 'seperate': 'separate',
+  'definately': 'definitely', 'accomodate': 'accommodate', 'wierd': 'weird',
+  'untill': 'until', 'wich': 'which', 'becuase': 'because', 'beleive': 'believe',
+  'alot': 'a lot', 'doesnt': "doesn't", 'dont': "don't", 'wont': "won't",
+  'cant': "can't", 'im': "I'm", 'ive': "I've", 'youre': "you're", 'thier': 'their'
+};
+
+function spellCheck(text) {
+  var corrections = [];
+  var words = text.split(/(\s+)/);
+
+  for (var i = 0; i < words.length; i++) {
+    var word = words[i].toLowerCase().replace(/[.,!?;:'"()]/g, '');
+    if (COMMON_MISSPELLINGS[word]) {
+      var original = words[i];
+      var punctMatch = original.match(/[.,!?;:'"()]+$/);
+      var punctuation = punctMatch ? punctMatch[0] : '';
+      var cleanWord = original.replace(/[.,!?;:'"()]/g, '');
+      var suggestion = COMMON_MISSPELLINGS[word];
+      var capitalized = cleanWord[0] === cleanWord[0].toUpperCase()
+        ? suggestion.charAt(0).toUpperCase() + suggestion.slice(1)
+        : suggestion;
+      words[i] = capitalized + punctuation;
+      corrections.push('"' + cleanWord + '" \u2192 "' + capitalized + '"');
+    }
+  }
+  return { corrected: words.join(''), corrections: corrections };
+}
+
+// ============================================
+// ICS Calendar File Generation
+// ============================================
+function generateICS(note) {
+  if (!note.reminderDate) return '';
+  var now = new Date();
+  var uid = 'r1note-' + note.id + '@r1device';
+  var formatDate = function(d) { return d.toISOString().replace(/[-:]/g, '').replace(/\.\d{3}/, ''); };
+
+  var dtstart, dtend;
+  if (note.reminderType === 'allday') {
+    var dateStr = note.reminderDate.replace(/-/g, '');
+    dtstart = 'DTSTART;VALUE=DATE:' + dateStr;
+    dtend = 'DTEND;VALUE=DATE:' + dateStr;
+  } else {
+    var dt = new Date(note.reminderDate + 'T' + (note.reminderTime || '09:00'));
+    if (isNaN(dt.getTime())) return ''; // Guard against invalid parsing
+    var endDt = new Date(dt.getTime() + 60 * 60 * 1000);
+    dtstart = 'DTSTART:' + formatDate(dt);
+    dtend = 'DTEND:' + formatDate(endDt);
+  }
+
+  return [
+    'BEGIN:VCALENDAR', 'VERSION:2.0', 'PRODID:-//R1Notes//EN',
+    'BEGIN:VEVENT', 'UID:' + uid, 'DTSTAMP:' + formatDate(now),
+    dtstart, dtend, 'SUMMARY:' + (note.subject || 'Note Reminder'),
+    'DESCRIPTION:' + (note.body || '').replace(/\n/g, '\\n').substring(0, 200),
+    'END:VEVENT', 'END:VCALENDAR'
+  ].join('\r\n');
+}
+
+// ============================================
+// Native Rabbit OS Email Integration
+// ============================================
+function sendEmail(note) {
+  if (!note) return;
+  var subject = note.subject || 'Note from R1';
+  var body = note.body || '';
+
+  if (note.reminderType !== 'none' && note.reminderDate) {
+    body += '\n\n--- Reminder ---\n';
+    body += note.reminderType === 'allday' 
+      ? 'All Day: ' + note.reminderDate 
+      : 'Date/Time: ' + note.reminderDate + ' ' + (note.reminderTime || '');
+    body += '\n\n--- ICS Calendar Invite Content ---\n';
+    body += generateICS(note);
+  }
+
+  if (typeof PluginMessageHandler !== "undefined" && PluginMessageHandler.postMessage) {
+    PluginMessageHandler.postMessage(JSON.stringify({ action: "email", subject: subject, body: body }));
+    showToast('Email dispatched! ✉️');
+  } else {
+    showToast('Email simulated (Testing)');
+  }
+}
+
+// ============================================
+// View Management
+// ============================================
+function showView(viewId) {
+  document.querySelectorAll('.view').forEach(function(v) { v.classList.remove('active'); });
+  document.getElementById(viewId).classList.add('active');
+}
+
+// ============================================
+// Note List Rendering
+// ============================================
+function renderNotesList(notesToRender) {
+  var list = document.getElementById('notes-list');
+  var items = notesToRender || notes;
+
+  if (!items || items.length === 0) {
+    list.innerHTML = '<div class="empty-state">No notes yet.<br>Tap \uFF0B or press side button to create one.</div>';
+    return;
+  }
+
+  var sorted = items.slice().sort(function(a, b) { return b.updatedAt - a.updatedAt; });
+  list.innerHTML = sorted.map(function(note) {
+    var date = new Date(note.updatedAt).toLocaleDateString();
+    var reminderHtml = '';
+    if (note.reminderType === 'allday' && note.reminderDate) {
+      reminderHtml = '<div class="note-item-reminder">\uD83D\uDCC5 ' + note.reminderDate + ' (All Day)</div>';
+    } else if (note.reminderType === 'datetime' && note.reminderDate) {
+      reminderHtml = '<div class="note-item-reminder">\u23F0 ' + note.reminderDate + ' ' + (note.reminderTime || '') + '</div>';
+    }
+    var photoCount = (note.photos && note.photos.length > 0) ? '<div class="note-item-photos">\uD83D\uDCF7 ' + note.photos.length + ' photo' + (note.photos.length > 1 ? 's' : '') + '</div>' : '';
+    return '<div class="note-item" data-id="' + note.id + '">' +
+      '<div class="note-item-subject">' + escapeHtml(note.subject || 'Untitled') + '</div>' +
+      '<div class="note-item-meta">' + date + '</div>' + reminderHtml + photoCount + '</div>';
+  }).join('');
+
+  list.querySelectorAll('.note-item').forEach(function(el) {
+    el.addEventListener('click', function() { openNote(el.dataset.id); });
+  });
+}
+
+function escapeHtml(str) {
+  var div = document.createElement('div');
+  div.textContent = str;
+  return div.innerHTML;
+}
+
+// ============================================
+// Note CRUD
+// ============================================
+function createNote() {
+  var note = {
+    id: Date.now().toString(36) + Math.random().toString(36).substring(2, 7),
+    subject: '', body: '', photos: [], reminderType: 'none',
+    reminderDate: '', reminderTime: '', createdAt: Date.now(), updatedAt: Date.now()
+  };
+  notes.push(note);
+  openNote(note.id);
+}
+
+function openNote(id) {
+  var note = notes.find(function(n) { return n.id === id; });
+  if (!note) return;
+  currentNoteId = id;
+
+  document.getElementById('note-subject').value = note.subject || '';
+  document.getElementById('note-body').value = note.body || '';
+  document.getElementById('reminder-type').value = note.reminderType || 'none';
+  document.getElementById('reminder-date').value = note.reminderDate || '';
+  document.getElementById('reminder-time').value = note.reminderTime || '';
+
+  if (!note.photos) note.photos = [];
+  renderPhotos(note.photos);
+  updateReminderFields();
+  showView('view-editor');
+}
+
+function saveCurrentNote() {
+  if (!currentNoteId) return;
+  var note = notes.find(function(n) { return n.id === currentNoteId; });
+  if (!note) return;
+
+  note.subject = document.getElementById('note-subject').value.trim();
+  note.body = document.getElementById('note-body').value;
+  note.reminderType = document.getElementById('reminder-type').value;
+  note.reminderDate = document.getElementById('reminder-date').value;
+  note.reminderTime = document.getElementById('reminder-time').value;
+  note.updatedAt = Date.now();
+
+  saveNotes();
+  renderNotesList();
+}
+
+function deleteCurrentNote() {
+  if (!currentNoteId) return;
+  var btn = document.getElementById('btn-delete');
+  
+  if (btn.dataset.confirm !== 'true') {
+    btn.dataset.confirm = 'true';
+    btn.innerHTML = 'Sure?';
+    btn.style.backgroundColor = '#cc0000';
+    
+    if (btn.confirmTimeout) clearTimeout(btn.confirmTimeout);
+    btn.confirmTimeout = setTimeout(function() {
+      btn.dataset.confirm = 'false';
+      btn.innerHTML = '&#128465;';
+      btn.style.backgroundColor = '';
+    }, 3000);
+    return;
+  }
+  
+  if (btn.confirmTimeout) clearTimeout(btn.confirmTimeout);
+  btn.dataset.confirm = 'false';
+  btn.innerHTML = '&#128465;';
+  btn.style.backgroundColor = '';
+  
+  notes = notes.filter(function(n) { return n.id !== currentNoteId; });
+  currentNoteId = null;
+  saveNotes();
+  showView('view-list');
+  renderNotesList();
+  showToast('Note deleted');
+}
+
+// ============================================
+// Photo Management
+// ============================================
+function renderPhotos(photos) {
+  var grid = document.getElementById('photos-grid');
+  if (!photos || photos.length === 0) { grid.innerHTML = ''; return; }
+  grid.innerHTML = photos.map(function(dataUrl, idx) {
+    return '<div class="photo-thumb">' +
+      '<img src="' + dataUrl + '" alt="Photo ' + (idx + 1) + '">' +
+      '<button class="photo-remove" data-idx="' + idx + '">\u00D7</button></div>';
+  }).join('');
+
+  grid.querySelectorAll('.photo-remove').forEach(function(btn) {
+    btn.addEventListener('click', function(e) {
+      e.stopPropagation();
+      removePhoto(parseInt(btn.dataset.idx));
+    });
+  });
+}
+
+function removePhoto(idx) {
+  var note = notes.find(function(n) { return n.id === currentNoteId; });
+  if (!note || !note.photos) return;
+  note.photos.splice(idx, 1);
+  renderPhotos(note.photos);
+  saveNotes();
+}
+
+function compressAndAddPhoto(file) {
+  var reader = new FileReader();
+  reader.onload = function(e) {
+    var img = new Image();
+    img.onload = function() {
+      var canvas = document.createElement('canvas');
+      var w = img.width, h = img.height;
+      if (w > MAX_PHOTO_WIDTH) { h = Math.round(h * (MAX_PHOTO_WIDTH / w)); w = MAX_PHOTO_WIDTH; }
+      canvas.width = w; canvas.height = h;
+      var ctx = canvas.getContext('2d');
+      ctx.drawImage(img, 0, 0, w, h);
+      var dataUrl = canvas.toDataURL('image/jpeg', MAX_PHOTO_QUALITY);
+
+      var note = notes.find(function(n) { return n.id === currentNoteId; });
+      if (!note) return;
+      if (!note.photos) note.photos = [];
+      note.photos.push(dataUrl);
+      renderPhotos(note.photos);
+      saveNotes();
+    };
+    img.src = e.target.result;
+  };
+  reader.readAsDataURL(file);
+}
+
+function handlePhotoInput(event) {
+  var files = event.target.files;
+  if (!files || files.length === 0) return;
+  for (var i = 0; i < files.length; i++) { compressAndAddPhoto(files[i]); }
+  event.target.value = '';
+}
+
+// ============================================
+// Reminder Fields Toggle
+// ============================================
+function updateReminderFields() {
+  var type = document.getElementById('reminder-type').value;
+  var fields = document.getElementById('reminder-fields');
+  var timeInput = document.getElementById('reminder-time');
+
+  if (type === 'none') { fields.classList.add('hidden'); } 
+  else {
+    fields.classList.remove('hidden');
+    type === 'datetime' ? timeInput.classList.remove('hidden') : timeInput.classList.add('hidden');
+  }
+}
+
+// ============================================
+// Search
+// ============================================
+function performSearch() {
+  var query = document.getElementById('search-input').value.trim().toLowerCase();
+  var dateFilter = document.getElementById('search-date').value;
+  var resultsEl = document.getElementById('search-results');
+  var results = notes;
+
+  if (query) {
+    results = results.filter(function(n) {
+      return (n.subject || '').toLowerCase().indexOf(query) !== -1 || (n.body || '').toLowerCase().indexOf(query) !== -1;
+    });
+  }
+  if (dateFilter) results = results.filter(function(n) { return n.reminderDate === dateFilter; });
+
+  if (results.length === 0) {
+    resultsEl.innerHTML = '<div class="empty-state">No notes found.</div>';
+    return;
+  }
+
+  var sorted = results.slice().sort(function(a, b) { return b.updatedAt - a.updatedAt; });
+  resultsEl.innerHTML = sorted.map(function(note) {
+    var date = new Date(note.updatedAt).toLocaleDateString();
+    var reminderHtml = (note.reminderType !== 'none' && note.reminderDate) 
+      ? '<div class="note-item-reminder">\uD83D\uDCC5 ' + note.reminderDate + '</div>' : '';
+    return '<div class="note-item" data-id="' + note.id + '">' +
+      '<div class="note-item-subject">' + escapeHtml(note.subject || 'Untitled') + '</div>' +
+      '<div class="note-item-meta">' + date + '</div>' + reminderHtml + '</div>';
+  }).join('');
+
+  resultsEl.querySelectorAll('.note-item').forEach(function(el) {
+    el.addEventListener('click', function() { openNote(el.dataset.id); });
+  });
+}
+
+// ============================================
+// Voice Recording (STT)
+// ============================================
+function toggleVoiceRecording() {
+  var btn = document.getElementById('btn-voice');
+  if (!isRecording) {
+    isRecording = true;
+    btn.classList.add('recording');
+    btn.textContent = '\u23F9 Stop';
+    if (typeof CreationVoiceHandler !== 'undefined') CreationVoiceHandler.postMessage('start');
+  } else {
+    isRecording = false;
+    btn.classList.remove('recording');
+    btn.textContent = '\uD83C\uDFA4 Voice';
+    if (typeof CreationVoiceHandler !== 'undefined') CreationVoiceHandler.postMessage('stop');
+  }
+}
+
+// ============================================
+// AI Integration
+// ============================================
+function sendToAI() {
+  var body = document.getElementById('note-body');
+  var text = body.value.trim();
+  if (!text) { showToast('Write a question first.'); return; }
+
+  var lines = text.split('\n');
+  var question = lines[lines.length - 1].trim() || text;
+
+  pendingAIRequest = true;
+  body.value += '\n\nUSER: ' + question + '\nAI: (thinking...)';
+
+  if (typeof PluginMessageHandler !== 'undefined') {
+    PluginMessageHandler.postMessage(JSON.stringify({
+      message: 'Answer this question concisely in 1-2 sentences: ' + question,
+      useLLM: true
+    }));
+  } else {
+    setTimeout(function() { handleAIResponse('AI simulation (testing).'); }, 1000);
+  }
+}
+
+function handleAIResponse(response) {
+  if (!pendingAIRequest) return;
+  pendingAIRequest = false;
+  var body = document.getElementById('note-body');
+  body.value = body.value.replace('AI: (thinking...)', 'AI: ' + response);
+  saveCurrentNote();
+}
+
+// ============================================
+// Plugin Message Handler (R1 Events)
+// ============================================
+window.onPluginMessage = function(data) {
+  var payloadObj = data;
+  if (typeof data === 'string') { try { payloadObj = JSON.parse(data); } catch(e) {} }
+
+  if (payloadObj && payloadObj.type === 'sttEnded' && payloadObj.transcript) {
+    var body = document.getElementById('note-body');
+    if (body && document.getElementById('view-editor').classList.contains('active')) {
+      var current = body.value;
+      body.value = current + (current ? ' ' : '') + payloadObj.transcript;
+      saveCurrentNote();
+    }
+    isRecording = false;
+    var btn = document.getElementById('btn-voice');
+    if (btn) { btn.classList.remove('recording'); btn.textContent = '\uD83C\uDFA4 Voice'; }
+    return;
+  }
+
+  if (pendingAIRequest) {
+    var response = '';
+    if (payloadObj && payloadObj.data) {
+      try {
+        var parsed = typeof payloadObj.data === 'string' ? JSON.parse(payloadObj.data) : payloadObj.data;
+        response = parsed.message || parsed.response || parsed.text || JSON.stringify(parsed);
+      } catch (e) { response = payloadObj.data; }
+    } else if (payloadObj && payloadObj.message) { response = payloadObj.message; }
+    if (response) handleAIResponse(response);
+  }
+};
+
+// ============================================
+// Hardware Events
+// ============================================
+window.addEventListener('sideClick', function() {
+  if (document.getElementById('view-editor').classList.contains('active')) return;
+  createNote();
+});
+
+window.addEventListener('longPressStart', function() {
+  if (document.getElementById('view-editor').classList.contains('active') && typeof CreationVoiceHandler !== 'undefined') {
+    isRecording = true;
+    var btn = document.getElementById('btn-voice');
+    if (btn) { btn.classList.add('recording'); btn.textContent = '\u23F9 Stop'; }
+    CreationVoiceHandler.postMessage('start');
+  }
+});
+
+window.addEventListener('longPressEnd', function() {
+  if (isRecording) {
+    isRecording = false;
+    var btn = document.getElementById('btn-voice');
+    if (btn) { btn.classList.remove('recording'); btn.textContent = '\uD83C\uDFA4 Voice'; }
+    if (typeof CreationVoiceHandler !== 'undefined') CreationVoiceHandler.postMessage('stop');
+  }
+});
+
+// ============================================
+// Initialization
+// ============================================
+document.addEventListener('DOMContentLoaded', function() {
+  loadNotes();
+  renderNotesList();
+
+  document.getElementById('btn-new').addEventListener('click', createNote);
+  document.getElementById('btn-search').addEventListener('click', function() { showView('view-search'); });
+  document.getElementById('btn-search-back').addEventListener('click', function() { showView('view-list'); renderNotesList(); });
+  document.getElementById('btn-editor-back').addEventListener('click', function() {
+    saveCurrentNote(); currentNoteId = null; showView('view-list'); renderNotesList();
+  });
+
+  document.getElementById('btn-photo').addEventListener('click', function() { document.getElementById('photo-input').click(); });
+  document.getElementById('photo-input').addEventListener('change', handlePhotoInput);
+
+  document.getElementById('btn-save').addEventListener('click', function() {
+    saveCurrentNote(); showToast('Saved!');
+  });
+  document.getElementById('btn-delete').addEventListener('click', deleteCurrentNote);
+  document.getElementById('btn-voice').addEventListener('click', toggleVoiceRecording);
+  document.getElementById('btn-ai').addEventListener('click', sendToAI);
+  document.getElementById('btn-email').addEventListener('click', function() {
+    var note = notes.find(function(n) { return n.id === currentNoteId; });
+    if (note) { saveCurrentNote(); sendEmail(note); }
+  });
+  
+  document.getElementById('btn-spell').addEventListener('click', function() {
+    var body = document.getElementById('note-body');
+    var result = spellCheck(body.value);
+    if (result.corrections.length > 0) {
+      body.value = result.corrected;
+      showToast('Fixed ' + result.corrections.length + ' words');
+      saveCurrentNote();
+    } else { showToast('No errors found'); }
+  });
+
+  document.getElementById('reminder-type').addEventListener('change', updateReminderFields);
+  document.getElementById('btn-do-search').addEventListener('click', performSearch);
+});
+    </script>
+</body>
+</html>
