@@ -80,7 +80,7 @@ jobs:
           mkdir -p ./final_site/R1Platformer
           cp -r R1Platformer/* ./final_site/R1Platformer/  
       # --- Note Taker2 ---
-      - name: Build and Copy R1 Platformer
+      - name: Build and Copy R1 NoteTaker
         run: |
           mkdir -p ./final_site/NoteTaker
           cp -r NoteTaker/* ./final_site/NoteTaker/
