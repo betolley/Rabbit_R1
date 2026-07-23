@@ -397,24 +397,46 @@ var currentNoteId = null;
 var isRecording = false;
 var pendingAIRequest = false;
 
-var MAX_PHOTO_WIDTH = 800;
-var MAX_PHOTO_QUALITY = 0.7;
+// Reduced photo defaults to prevent localStorage memory overflow
+var MAX_PHOTO_WIDTH = 400;
+var MAX_PHOTO_QUALITY = 0.5;
+
+// ============================================
+// UTF-8 Safe Base64 Helpers
+// ============================================
+function safeBtoa(str) {
+  return btoa(encodeURIComponent(str).replace(/%([0-9A-F]{2})/g, function(match, p1) {
+    return String.fromCharCode('0x' + p1);
+  }));
+}
+
+function safeAtob(str) {
+  return decodeURIComponent(Array.prototype.map.call(atob(str), function(c) {
+    return '%' + ('00' + c.charCodeAt(0).toString(16)).slice(-2);
+  }).join(''));
+}
 
 // ============================================
 // Storage (Native R1 creationStorage Persistence)
 // ============================================
 async function saveNotes() {
-  var encoded = btoa(JSON.stringify(notes));
-  if (window.creationStorage && window.creationStorage.plain) {
-    try {
-      await window.creationStorage.plain.setItem('r1_notes_data', encoded);
-      console.log('Notes saved to creationStorage.');
-      return;
-    } catch(e) {
-      console.warn('creationStorage error, falling back to localStorage:', e);
+  try {
+    var jsonStr = JSON.stringify(notes);
+    var encoded = safeBtoa(jsonStr);
+
+    if (window.creationStorage && window.creationStorage.plain) {
+      try {
+        await window.creationStorage.plain.setItem('r1_notes_data', encoded);
+        console.log('Notes saved to creationStorage.');
+        return;
+      } catch(e) {
+        console.warn('creationStorage error, falling back to localStorage:', e);
+      }
     }
+    localStorage.setItem('r1_notes_data', jsonStr);
+  } catch (e) {
+    console.error('Error saving notes:', e);
   }
-  localStorage.setItem('r1_notes_data', JSON.stringify(notes));
 }
 
 async function loadNotes() {
@@ -422,7 +444,7 @@ async function loadNotes() {
     try {
       var stored = await window.creationStorage.plain.getItem('r1_notes_data');
       if (stored) {
-        notes = JSON.parse(atob(stored));
+        notes = JSON.parse(safeAtob(stored));
         return;
       }
     } catch(e) {
