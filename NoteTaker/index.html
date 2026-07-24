@@ -328,10 +328,8 @@ function sendEmail(note) {
   if (!note) return;
   
   var subject = note.subject || 'Note from R1';
-  var body = note.body || '';
-  body +=note.reminderType + ' ' + note.reminderDate
-  body +='reminder-'  
-  if (note.reminderType !== 'none' && note.reminderDate) {
+  var body = note.body || ''; 
+  if (note.reminderType !== 'none') {
     body += '\n\n--- Reminder ---\n';
     body += note.reminderType === 'allday' 
       ? 'All Day: ' + note.reminderDate 
@@ -358,7 +356,7 @@ function sendEmail(note) {
     var subject = note.subject || 'Note from R1';
   var body = note.body || '';
 
-  if (note.reminderType !== 'none' && note.reminderDate) {
+  if (note.reminderType !== 'none') {
     body += '\n\n--- Reminder ---\n';
     body += note.reminderType === 'allday' 
       ? 'All Day: ' + note.reminderDate 
