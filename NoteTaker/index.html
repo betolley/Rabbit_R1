@@ -3,7 +3,7 @@
 <head>
     <meta charset="UTF-8">
     <meta name="viewport" content="width=240, height=320, user-scalable=no, initial-scale=1.0">
-    <title>R1 Notes 2i</title>
+    <title>R1 Notes 2j</title>
     <style>
 * { margin: 0; padding: 0; box-sizing: border-box; }
 
@@ -143,7 +143,7 @@ html, body {
     <div id="app">
         <div id="view-list" class="view active">
             <div class="header">
-                <span class="header-title">Notes 2i</span>
+                <span class="header-title">Notes 2j</span>
                 <button id="btn-search" class="header-btn">&#128269;</button>
                 <button id="btn-new" class="header-btn">&#xFF0B;</button>
             </div>
@@ -327,8 +327,8 @@ function generateICS(note) {
 function sendEmail(note) {
   if (!note) return;
      var subject = note.subject || 'Note from R1';
-  var body = note.body || '';
-
+  var body = note.body + note.reminderDate || '';
+   
  if (note.reminderType !== 'none') {
   body += '\n\n--- Reminder ---\n';
   
