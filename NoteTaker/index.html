@@ -329,14 +329,17 @@ function sendEmail(note) {
      var subject = note.subject || 'Note from R1';
   var body = note.body || '';
 
-  if (note.reminderType !== 'none') {
-    body += '\n\n--- Reminder ---\n';
-    body += note.reminderType === 'allday' 
-      ? 'All Day: ' + note.reminderDate 
-      : 'Date/Time: ' + note.reminderDate + ' ' + (note.reminderTime || '');
-    //body +=note.reminderDate + ' ' + note.reminderTime
-    body += '\n\n--- ICS Calendar Invite Content ---\n';
+ if (note.reminderType !== 'none') {
+  body += '\n\n--- Reminder ---\n';
+  
+  if (note.reminderType === 'allday') {
+    body += 'All Day: ' + note.reminderDate;
+  } else {
+    body += 'Date/Time: ' + note.reminderDate + ' ' + (note.reminderTime || '');
   }
+
+  body += '\n\n--- ICS Calendar Invite Content ---\n';
+}
 
   // Combine subject and body into the email content variable
   var emailContent = 'Subject: ' + subject + '\n\n' + body;
@@ -357,18 +360,20 @@ function sendEmail(note) {
   }
  
 // ============================================
-    var subject = note.subject || 'Note from R1';
+  var subject = note.subject || 'Note from R1';
   var body = note.body || '';
-  showToast(note.reminderType)
-  if (note.reminderType !== 'none') {
-    body += '\n\n--- Reminder ---\n';
-    body += note.reminderType === 'allday' 
-      ? 'All Day: ' + note.reminderDate 
-      : 'Date/Time: ' + note.reminderDate + ' ' + (note.reminderTime || '');
-    body +=note.reminderDate + ' ' + note.reminderTime
-    body += '\n\n--- ICS Calendar Invite Content ---\n';
-    body += generateICS(note);
+  // showToast(note.reminderType)
+ if (note.reminderType !== 'none') {
+  body += '\n\n--- Reminder ---\n';
+  
+  if (note.reminderType === 'allday') {
+    body += 'All Day: ' + note.reminderDate;
+  } else {
+    body += 'Date/Time: ' + note.reminderDate + ' ' + (note.reminderTime || '');
   }
+
+  body += '\n\n--- ICS Calendar Invite Content ---\n';
+}
 
   // Combine subject and body into the email content variable
   var emailContent = 'Subject: ' + subject + '\n\n' + body;
