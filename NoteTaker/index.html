@@ -326,15 +326,16 @@ function generateICS(note) {
 // ============================================
 function sendEmail(note) {
   if (!note) return;
-  
-  var subject = note.subject || 'Note from R1';
-  var body = note.body || ''; 
+     var subject = note.subject || 'Note from R1';
+  var body = note.body || '';
+
   if (note.reminderType !== 'none') {
     body += '\n\n--- Reminder ---\n';
     body += note.reminderType === 'allday' 
       ? 'All Day: ' + note.reminderDate 
       : 'Date/Time: ' + note.reminderDate + ' ' + (note.reminderTime || '');
     body +=note.reminderDate + ' ' + note.reminderTime
+    body += '\n\n--- ICS Calendar Invite Content ---\n';
   }
 
   // Combine subject and body into the email content variable
@@ -344,7 +345,9 @@ function sendEmail(note) {
   if (window.PluginMessageHandler) {
     PluginMessageHandler.postMessage(JSON.stringify({
       message: `email ${emailContent}`,
-      useLLM: true
+      useLLM: true,
+      wantsR1Response: true,
+      wantsJournalEntry: false
     }));
     
     this.updateStatusText('Emailing upcoming tasks...');
@@ -352,7 +355,8 @@ function sendEmail(note) {
     // Fallback: show email content for manual sending
     this.showEmailContent('Upcoming Tasks', emailContent);
   }
-
+ 
+// ============================================
     var subject = note.subject || 'Note from R1';
   var body = note.body || '';
 
