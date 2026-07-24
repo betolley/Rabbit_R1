@@ -574,37 +574,54 @@
             });
         }
 
-        // Save & Load Engine
-        async function loadSavedData() {
-            try {
-                if (window.creationStorage) {
-                    const localData = await window.creationStorage.plain.getItem(STORAGE_KEY);
-                    if (localData) {
-                        trackerData = JSON.parse(atob(localData));
-                    }
-                } else {
-                    const localData = localStorage.getItem(STORAGE_KEY);
-                    if (localData) trackerData = JSON.parse(localData);
-                }
-            } catch (e) {
-                console.error("Failed to load data", e);
+       async function loadSavedData() {
+    try {
+        console.log("[Storage Debug] Attempting to load data. CreationStorage available:", !!window.creationStorage);
+        
+        if (window.creationStorage && window.creationStorage.plain) {
+            // Ensure getItem is awaited properly in case it's a promise-based bridge
+            const localData = await window.creationStorage.plain.getItem(STORAGE_KEY);
+            console.log("[Storage Debug] Raw data loaded from creationStorage:", localData);
+            
+            if (localData) {
+                // Handle case where localData might accidentally be an object or string
+                const decodedString = typeof localData === 'string' ? atob(localData) : localData;
+                trackerData = JSON.parse(decodedString);
             }
-            if (!trackerData) trackerData = {};
-        }
-
-        async function saveData() {
-            const dataString = JSON.stringify(trackerData);
-            try {
-                if (window.creationStorage) {
-                    await window.creationStorage.plain.setItem(STORAGE_KEY, btoa(dataString));
-                } else {
-                    localStorage.setItem(STORAGE_KEY, dataString);
-                }
-            } catch (e) {
-                console.error("Failed to save data", e);
+        } else {
+            console.log("[Storage Debug] Falling back to standard localStorage");
+            const localData = localStorage.getItem(STORAGE_KEY);
+            if (localData) {
+                trackerData = JSON.parse(localData);
             }
         }
+    } catch (e) {
+        console.error("[Storage Error] Failed to load data safely:", e);
+    }
+    
+    if (!trackerData || typeof trackerData !== 'object') {
+        console.warn("[Storage Warning] trackerData was invalid or empty, initializing empty object.");
+        trackerData = {};
+    }
+}
 
+async function saveData() {
+    try {
+        const dataString = JSON.stringify(trackerData);
+        console.log("[Storage Debug] Attempting to save data:", dataString);
+
+        if (window.creationStorage && window.creationStorage.plain) {
+            const encodedData = btoa(dataString);
+            await window.creationStorage.plain.setItem(STORAGE_KEY, encodedData);
+            console.log("[Storage Debug] Successfully saved via creationStorage");
+        } else {
+            localStorage.setItem(STORAGE_KEY, dataString);
+            console.log("[Storage Debug] Successfully saved via localStorage");
+        }
+    } catch (e) {
+        console.error("[Storage Error] Failed to save data:", e);
+    }
+}
         function forceSaveData() {
             saveData();
             showStatus("Saved securely to OS! ✓");
