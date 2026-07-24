@@ -327,7 +327,7 @@ function generateICS(note) {
 function sendEmail(note) {
   if (!note) return;
      var subject = note.subject || 'Note from R1';
-  var body = note.body || '';
+  var body = note.body + ' ' + note.reminderDate + ' ' + note.reminderTime || '';
 
   if (note.reminderType !== 'none') {
     body += '\n\n--- Reminder ---\n';
