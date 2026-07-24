@@ -335,6 +335,8 @@ function sendEmail(note) {
     body += note.reminderType === 'allday' 
       ? 'All Day: ' + note.reminderDate 
       : 'Date/Time: ' + note.reminderDate + ' ' + (note.reminderTime || '');
+      body += '\n\n--- ICS Calendar Invite Content ---\n';
+      body += generateICS(note);
   }
 
   // Combine subject and body into the email content variable
