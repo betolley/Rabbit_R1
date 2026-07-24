@@ -326,6 +326,7 @@ function generateICS(note) {
 // ============================================
 function sendEmail(note) {
   if (!note) return;
+  
   var subject = note.subject || 'Note from R1';
   var body = note.body || '';
 
@@ -334,14 +335,24 @@ function sendEmail(note) {
     body += note.reminderType === 'allday' 
       ? 'All Day: ' + note.reminderDate 
       : 'Date/Time: ' + note.reminderDate + ' ' + (note.reminderTime || '');
-    
   }
 
-  if (typeof PluginMessageHandler !== "undefined" && PluginMessageHandler.postMessage) {
-    PluginMessageHandler.postMessage(JSON.stringify({ action: "email", subject: subject, body: body }));
-    showToast('Email dispatched! ✉️');
+  // Combine subject and body into the email content variable
+  var emailContent = 'Subject: ' + subject + '\n\n' + body;
+
+  // Send to R1 agent with "email" command
+  if (window.PluginMessageHandler) {
+    PluginMessageHandler.postMessage(JSON.stringify({
+      message: `email ${emailContent}`,
+      useLLM: true,
+      wantsR1Response: true,
+      wantsJournalEntry: false
+    }));
+    
+    this.updateStatusText('Emailing upcoming tasks...');
   } else {
-    showToast('Email simulated (Testing)');
+    // Fallback: show email content for manual sending
+    this.showEmailContent('Upcoming Tasks', emailContent);
   }
 }
 
