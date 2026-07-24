@@ -3,7 +3,7 @@
 <head>
     <meta charset="UTF-8">
     <meta name="viewport" content="width=240, height=320, user-scalable=no, initial-scale=1.0">
-    <title>R1 Notes 2e</title>
+    <title>R1 Notes 2f</title>
     <style>
 * { margin: 0; padding: 0; box-sizing: border-box; }
 
@@ -143,7 +143,7 @@ html, body {
     <div id="app">
         <div id="view-list" class="view active">
             <div class="header">
-                <span class="header-title">Notes 2e</span>
+                <span class="header-title">Notes 2f</span>
                 <button id="btn-search" class="header-btn">&#128269;</button>
                 <button id="btn-new" class="header-btn">&#xFF0B;</button>
             </div>
@@ -328,6 +328,34 @@ function sendEmail(note) {
   if (!note) return;
   
   var subject = note.subject || 'Note from R1';
+  var body = note.body || '';
+
+  if (note.reminderType !== 'none' && note.reminderDate) {
+    body += '\n\n--- Reminder ---\n';
+    body += note.reminderType === 'allday' 
+      ? 'All Day: ' + note.reminderDate 
+      : 'Date/Time: ' + note.reminderDate + ' ' + (note.reminderTime || '');
+    body += '\n\n--- ICS Calendar Invite Content ---\n';
+    body += generateICS(note);
+  }
+
+  // Combine subject and body into the email content variable
+  var emailContent = 'Subject: ' + subject + '\n\n' + body;
+
+  // Send to R1 agent with "email" command
+  if (window.PluginMessageHandler) {
+    PluginMessageHandler.postMessage(JSON.stringify({
+      message: `email ${emailContent}`,
+      useLLM: true
+    }));
+    
+    this.updateStatusText('Emailing upcoming tasks...');
+  } else {
+    // Fallback: show email content for manual sending
+    this.showEmailContent('Upcoming Tasks', emailContent);
+  }
+
+    var subject = note.subject || 'Note from R1';
   var body = note.body || '';
 
   if (note.reminderType !== 'none' && note.reminderDate) {
