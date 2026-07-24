@@ -359,7 +359,7 @@ function sendEmail(note) {
 // ============================================
     var subject = note.subject || 'Note from R1';
   var body = note.body || '';
-
+  showToast(note.reminderType)
   if (note.reminderType !== 'none') {
     body += '\n\n--- Reminder ---\n';
     body += note.reminderType === 'allday' 
