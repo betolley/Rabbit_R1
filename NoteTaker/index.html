@@ -329,7 +329,7 @@ function sendEmail(note) {
   
   var subject = note.subject || 'Note from R1';
   var body = note.body || '';
-
+  body +=note.reminderType + ' ' + note.reminderDate
   if (note.reminderType !== 'none' && note.reminderDate) {
     body += '\n\n--- Reminder ---\n';
     body += note.reminderType === 'allday' 
